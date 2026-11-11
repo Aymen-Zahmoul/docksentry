@@ -3,6 +3,7 @@ import { animate } from "animejs";
 import { FiPlay, FiLayers, FiFileText, FiRadio, FiCheckCircle } from "react-icons/fi";
 import { TbShieldCheck, TbRadar2 } from "react-icons/tb";
 import { Button } from "../ui/Button";
+import { CloudButton } from "../ui/CloudButton";
 import { ScanType } from "../../types/scan";
 
 interface NewScanModalProps {
@@ -212,15 +213,16 @@ export const NewScanModal: React.FC<NewScanModalProps> = ({
           <Button variant="ghost" size="sm" onClick={onClose} disabled={isScanning}>
             Cancel
           </Button>
-          <Button
-            variant="primary"
+          <CloudButton
+            variant="cyan"
             size="sm"
             onClick={handleStart}
             disabled={isScanning}
+            loading={isScanning}
             icon={<FiPlay className="w-3.5 h-3.5 fill-current" />}
           >
             {isScanning ? "Scanning..." : "Execute Audit"}
-          </Button>
+          </CloudButton>
         </div>
       </div>
     </div>

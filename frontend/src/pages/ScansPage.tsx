@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { FiPlay, FiClock, FiFileText, FiLayers, FiRadio, FiCheckCircle } from "react-icons/fi";
 import { TbShieldCheck } from "react-icons/tb";
 import { Button } from "../components/ui/Button";
+import { CloudButton } from "../components/ui/CloudButton";
 import { NewScanModal } from "../components/scans/NewScanModal";
 import { getScans, startScan } from "../services/scans.service";
 import { Scan, ScanType } from "../types/scan";
@@ -56,14 +57,14 @@ export const ScansPage: React.FC = () => {
           </p>
         </div>
 
-        <Button
+        <CloudButton
           variant="white"
           size="sm"
           onClick={() => setIsModalOpen(true)}
           icon={<FiPlay className="w-3 h-3 fill-current" />}
         >
           Start Audit
-        </Button>
+        </CloudButton>
       </div>
 
       {/* Scans Table */}
