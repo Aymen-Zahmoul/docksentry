@@ -87,20 +87,23 @@ export const DashboardPage: React.FC = () => {
       {/* 1. Fluid Master Hero: Posture Horizon + Borderless Telemetry Ribbon */}
       <PostureHorizon stats={stats} />
 
-      {/* 2. Interactive Risk Spectrum Bar */}
-      <RiskSpectrum summary={stats.findings_summary} />
+      {/* 2. Option A: Asymmetric Command Cockpit (2-Column Architecture) */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        {/* Left Column (Primary Telemetry & Hardening Posture: 7 cols / ~58%) */}
+        <div className="lg:col-span-7 space-y-6">
+          <RiskSpectrum summary={stats.findings_summary} />
+          <HardeningPostureList categories={stats.category_posture || []} />
+        </div>
 
-      {/* 3. Fluid Two-Column Editorial Stream: Hardening Domains & Recurring Issues */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <HardeningPostureList categories={stats.category_posture || []} />
-        <FluidIssuesStream
-          issues={stats.top_issues}
-          onSelectRule={handleSelectRule}
-        />
+        {/* Right Column (Live Threat Feed & Execution Timeline: 5 cols / ~42%) */}
+        <div className="lg:col-span-5 space-y-6 lg:sticky lg:top-4">
+          <FluidIssuesStream
+            issues={stats.top_issues}
+            onSelectRule={handleSelectRule}
+          />
+          <FluidRecentScans scans={scans} />
+        </div>
       </div>
-
-      {/* 4. Fluid Recent Audits Stream */}
-      <FluidRecentScans scans={scans} />
 
       {/* 5. Stunning Slide-in Inspection Drawer */}
       <FindingDetailDrawer
