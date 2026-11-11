@@ -52,7 +52,7 @@ class ReportExporter:
                         "driver": {
                             "name": "DOCKSENTRY",
                             "version": "1.0.0",
-                            "informationUri": "https://github.com/docksentry/docksentry",
+                            "informationUri": "https://github.com/Aymen-Zahmoul/docksentry",
                             "rules": list(rules_map.values()),
                         }
                     },

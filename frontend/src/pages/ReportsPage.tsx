@@ -49,7 +49,7 @@ export const ReportsPage: React.FC = () => {
           tool: {
             driver: {
               name: "DOCKSENTRY",
-              informationUri: "https://github.com/docksentry/docksentry",
+              informationUri: "https://github.com/Aymen-Zahmoul/docksentry",
               rules: mockFindings.map((f) => ({
                 id: f.rule_id,
                 name: f.title,
