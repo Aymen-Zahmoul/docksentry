@@ -70,7 +70,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ onScanCompleted }) => {
     {
       title: "GitHub",
       icon: <IconBrandGithub className="h-full w-full text-slate-400 hover:text-white" />,
-      href: "https://github.com/docksentry/docksentry",
+      href: "https://github.com/Aymen-Zahmoul/docksentry",
     },
   ];
 

@@ -57,12 +57,12 @@ export const ScansPage: React.FC = () => {
         </div>
 
         <Button
-          variant="primary"
+          variant="white"
           size="sm"
           onClick={() => setIsModalOpen(true)}
-          icon={<FiPlay className="w-3.5 h-3.5 fill-current" />}
+          icon={<FiPlay className="w-3 h-3 fill-current" />}
         >
-          Run New Audit
+          Start Audit
         </Button>
       </div>
 

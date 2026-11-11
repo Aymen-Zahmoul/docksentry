@@ -20,6 +20,7 @@ export const router = createBrowserRouter([
       { path: "rules", element: <RulesPage /> },
       { path: "reports", element: <ReportsPage /> },
       { path: "settings", element: <SettingsPage /> },
+      { path: "parameters", element: <SettingsPage /> },
       { path: "*", element: <Navigate to="/" replace /> },
     ],
   },

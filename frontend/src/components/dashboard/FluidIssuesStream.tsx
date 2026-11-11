@@ -7,9 +7,10 @@ import { TopIssue } from "../../types/dashboard";
 
 interface FluidIssuesStreamProps {
   issues: TopIssue[];
+  onSelectRule?: (ruleId: string) => void;
 }
 
-export const FluidIssuesStream: React.FC<FluidIssuesStreamProps> = ({ issues }) => {
+export const FluidIssuesStream: React.FC<FluidIssuesStreamProps> = ({ issues, onSelectRule }) => {
   return (
     <div className="rounded-2xl bg-slate-900/30 backdrop-blur-md border border-white/[0.05] p-5 flex flex-col justify-between">
       {/* Header */}
@@ -29,34 +30,46 @@ export const FluidIssuesStream: React.FC<FluidIssuesStreamProps> = ({ issues }) 
 
       {/* Fluid List */}
       <div className="divide-y divide-white/[0.04] flex-1">
-        {issues.map((issue) => (
-          <Link
-            key={issue.rule_id}
-            to={`/findings?search=${encodeURIComponent(issue.rule_id)}`}
-            className="py-3 px-1.5 flex items-center justify-between gap-3 group hover:bg-white/[0.02] rounded-lg transition-colors cursor-pointer"
-          >
-            <div className="flex items-center gap-3 min-w-0">
-              <span className="font-mono text-xs font-semibold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shrink-0">
-                {issue.rule_id}
-              </span>
-              <div className="min-w-0">
-                <div className="text-xs text-slate-200 group-hover:text-white transition-colors truncate">
-                  {issue.title}
-                </div>
-                <div className="text-[10px] text-slate-400 font-mono uppercase tracking-wider mt-0.5">
-                  Category: {issue.category}
+        {issues.map((issue) => {
+          const content = (
+            <div className="py-3 px-1.5 flex items-center justify-between gap-3 group hover:bg-white/[0.02] rounded-lg transition-colors cursor-pointer">
+              <div className="flex items-center gap-3 min-w-0">
+                <span className="font-mono text-xs font-semibold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shrink-0">
+                  {issue.rule_id}
+                </span>
+                <div className="min-w-0">
+                  <div className="text-xs text-slate-200 group-hover:text-white transition-colors truncate">
+                    {issue.title}
+                  </div>
+                  <div className="text-[10px] text-slate-400 font-mono uppercase tracking-wider mt-0.5">
+                    Category: {issue.category}
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div className="flex items-center gap-2.5 shrink-0">
-              <SeverityBadge severity={issue.severity} size="sm" showDot={false} />
-              <span className="text-xs font-mono font-semibold px-2 py-0.5 rounded bg-slate-950/80 text-slate-300 border border-white/[0.06]">
-                {issue.count}x
-              </span>
+              <div className="flex items-center gap-2.5 shrink-0">
+                <SeverityBadge severity={issue.severity} size="sm" showDot={false} />
+                <span className="text-xs font-mono font-semibold px-2 py-0.5 rounded bg-slate-950/80 text-slate-300 border border-white/[0.06]">
+                  {issue.count}x
+                </span>
+              </div>
             </div>
-          </Link>
-        ))}
+          );
+
+          if (onSelectRule) {
+            return (
+              <div key={issue.rule_id} onClick={() => onSelectRule(issue.rule_id)}>
+                {content}
+              </div>
+            );
+          }
+
+          return (
+            <Link key={issue.rule_id} to={`/findings?search=${encodeURIComponent(issue.rule_id)}`}>
+              {content}
+            </Link>
+          );
+        })}
       </div>
     </div>
   );

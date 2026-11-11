@@ -2,14 +2,14 @@ import React from "react";
 import { cn } from "@/lib/utils";
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: "primary" | "secondary" | "outline" | "ghost" | "danger";
+  variant?: "primary" | "white" | "cyan" | "obsidian" | "secondary" | "outline" | "ghost" | "danger";
   size?: "sm" | "md" | "lg";
   icon?: React.ReactNode;
 }
 
 export const Button: React.FC<ButtonProps> = ({
   children,
-  variant = "primary",
+  variant = "white",
   size = "md",
   icon,
   className = "",
@@ -26,16 +26,25 @@ export const Button: React.FC<ButtonProps> = ({
   }[size];
 
   const variants = {
+    // High-contrast Apple/Linear white pill (super clean & prominent)
+    white:
+      "bg-white hover:bg-slate-100 text-slate-950 font-semibold shadow-sm active:bg-slate-200",
     primary:
-      "bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm active:bg-emerald-700",
+      "bg-white hover:bg-slate-100 text-slate-950 font-semibold shadow-sm active:bg-slate-200",
+    // Electric Ice-Cyan variant
+    cyan:
+      "bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 border border-cyan-500/30 hover:border-cyan-400 active:bg-cyan-500/30",
+    // Sleek Obsidian Glass with luminous border
+    obsidian:
+      "bg-slate-900/90 hover:bg-slate-800 text-slate-100 border border-white/15 hover:border-white/30 shadow-sm active:bg-slate-950",
     secondary:
-      "bg-slate-800/90 hover:bg-slate-700 text-slate-200 border border-slate-700/80 shadow-sm",
+      "bg-slate-800/80 hover:bg-slate-700/80 text-slate-200 border border-white/[0.08] shadow-sm",
     outline:
-      "bg-transparent hover:bg-slate-800/60 text-slate-300 border border-slate-700",
+      "bg-transparent hover:bg-white/[0.05] text-slate-300 border border-white/[0.1]",
     ghost:
-      "bg-transparent hover:bg-slate-800/50 text-slate-400 hover:text-slate-200",
+      "bg-transparent hover:bg-white/[0.05] text-slate-400 hover:text-white",
     danger:
-      "bg-red-600 hover:bg-red-500 text-white shadow-sm active:bg-red-700",
+      "bg-red-600/90 hover:bg-red-500 text-white shadow-sm active:bg-red-700",
   }[variant];
 
   return (
@@ -49,3 +58,5 @@ export const Button: React.FC<ButtonProps> = ({
     </button>
   );
 };
+
+export default Button;

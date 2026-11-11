@@ -89,13 +89,13 @@ export const Header: React.FC<HeaderProps> = ({
       {/* Right: Quick Action Button */}
       <div className="flex items-center gap-3">
         <Button
-          variant="primary"
+          variant="white"
           size="sm"
           onClick={onOpenNewScan}
-          icon={<FiPlay className="w-3.5 h-3.5 fill-current" />}
-          className="font-mono uppercase tracking-wider text-xs"
+          icon={<FiPlay className="w-3 h-3 fill-current" />}
+          className="font-mono tracking-tight text-xs px-3.5 py-1.5 font-semibold"
         >
-          Run Security Scan
+          Start Audit
         </Button>
       </div>
     </header>
