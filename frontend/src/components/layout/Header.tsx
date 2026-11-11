@@ -2,7 +2,6 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { FiPlay, FiChevronDown, FiFolder, FiCheck } from "react-icons/fi";
 import { Button } from "../ui/Button";
-import { CloudButton } from "../ui/CloudButton";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -89,14 +88,14 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Right: Quick Action Button */}
       <div className="flex items-center gap-3">
-        <CloudButton
+        <Button
           variant="white"
           size="sm"
           onClick={onOpenNewScan}
-          icon={<FiPlay className="w-3 h-3 fill-current" />}
+          icon={<FiPlay className="w-3.5 h-3.5 fill-current" />}
         >
           Start Audit
-        </CloudButton>
+        </Button>
       </div>
     </header>
   );

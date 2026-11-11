@@ -10,7 +10,6 @@ import {
 } from "react-icons/fi";
 import { TbShieldCheck } from "react-icons/tb";
 import { Button } from "../ui/Button";
-import { CloudButton } from "../ui/CloudButton";
 import { Component as Loader3D } from "../ui/loader-3";
 import { ScanType } from "../../types/scan";
 
@@ -280,14 +279,14 @@ export const NewScanModal: React.FC<NewScanModalProps> = ({
           </Button>
 
           {!isScanning && (
-            <CloudButton
-              variant="cyan"
+            <Button
+              variant="white"
               size="sm"
               onClick={handleStart}
               icon={<FiPlay className="w-3.5 h-3.5 fill-current" />}
             >
               Execute Audit
-            </CloudButton>
+            </Button>
           )}
         </div>
       </div>

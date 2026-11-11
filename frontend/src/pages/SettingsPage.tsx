@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { FiSave, FiRefreshCw, FiCheck, FiCpu, FiShield, FiBell, FiTerminal } from "react-icons/fi";
 import { Button } from "../components/ui/Button";
-import { CloudButton } from "../components/ui/CloudButton";
 import { Switch } from "../components/ui/Switch";
 
 interface SettingsState {
@@ -235,14 +234,14 @@ export const SettingsPage: React.FC = () => {
             Reset to Defaults
           </button>
 
-          <CloudButton
+          <Button
             variant={saved ? "emerald" : "white"}
             size="md"
             onClick={handleSave}
-            icon={saved ? <FiCheck className="w-4 h-4 text-emerald-950" /> : <FiSave className="w-4 h-4" />}
+            icon={saved ? <FiCheck className="w-4 h-4 text-emerald-400" /> : <FiSave className="w-4 h-4" />}
           >
             {saved ? "Configuration Saved!" : "Save Parameters"}
-          </CloudButton>
+          </Button>
         </div>
       </div>
     </div>
