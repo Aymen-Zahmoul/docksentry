@@ -1,5 +1,6 @@
 import React from "react";
 import { cn } from "../../lib/utils";
+import { CloudShader } from "./cloud-shader";
 
 export interface CloudButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement> {
@@ -138,11 +139,41 @@ export const CloudButton = React.forwardRef<HTMLButtonElement, CloudButtonProps>
             Replicating the exact puffy white cloud from reference
             ======================================================== */}
         <div className="absolute inset-0 pointer-events-none">
-          {/* 1. Core central connecting volume */}
+          {/* 1. Core central connecting volume with active drifting background cloud shader */}
           <div
-            className="absolute inset-x-2 inset-y-1 rounded-full transition-transform duration-300 group-hover:scale-[1.01]"
+            className="absolute inset-x-2 inset-y-1 rounded-full overflow-hidden transition-transform duration-300 group-hover:scale-[1.01]"
             style={themes.coreStyle}
-          />
+          >
+            {/* Embedded WebGL Cloud Shader flowing inside the button body */}
+            <div className="absolute inset-0 opacity-40 mix-blend-overlay pointer-events-none">
+              <CloudShader
+                className="w-full h-full"
+                speed={0.8}
+                count={3}
+                cloudColor={
+                  variant === "emerald"
+                    ? "#a7f3d0"
+                    : variant === "cyan"
+                    ? "#7dd3fc"
+                    : "#ffffff"
+                }
+                skyTopColor={
+                  variant === "emerald"
+                    ? "#064e3b"
+                    : variant === "cyan"
+                    ? "#0369a1"
+                    : "#334155"
+                }
+                skyBottomColor={
+                  variant === "emerald"
+                    ? "#022c22"
+                    : variant === "cyan"
+                    ? "#0c4a6e"
+                    : "#0f172a"
+                }
+              />
+            </div>
+          </div>
 
           {/* 2. Top-Center Dominant Crest (highest peak) */}
           <div

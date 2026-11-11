@@ -1,9 +1,17 @@
 import React, { useState, useEffect, useRef } from "react";
-import { animate } from "animejs";
-import { FiPlay, FiLayers, FiFileText, FiRadio, FiCheckCircle } from "react-icons/fi";
-import { TbShieldCheck, TbRadar2 } from "react-icons/tb";
+import {
+  FiPlay,
+  FiLayers,
+  FiFileText,
+  FiRadio,
+  FiCheckCircle,
+  FiX,
+  FiStopCircle,
+} from "react-icons/fi";
+import { TbShieldCheck } from "react-icons/tb";
 import { Button } from "../ui/Button";
 import { CloudButton } from "../ui/CloudButton";
+import { Component as Loader3D } from "../ui/loader-3";
 import { ScanType } from "../../types/scan";
 
 interface NewScanModalProps {
@@ -20,11 +28,17 @@ export const NewScanModal: React.FC<NewScanModalProps> = ({
   const [selectedType, setSelectedType] = useState<ScanType>("compose");
   const [targetPath, setTargetPath] = useState("./docker-compose.yml");
   const [isScanning, setIsScanning] = useState(false);
+  const [progress, setProgress] = useState(0);
   const [scanStep, setScanStep] = useState("");
-  const progressBarRef = useRef<HTMLDivElement>(null);
-  const radarRef = useRef<SVGSVGElement>(null);
+  const timerRef = useRef<any>(null);
 
-  const targets: { type: ScanType; label: string; desc: string; defaultTarget: string; icon: any }[] = [
+  const targets: {
+    type: ScanType;
+    label: string;
+    desc: string;
+    defaultTarget: string;
+    icon: any;
+  }[] = [
     {
       type: "compose",
       label: "Docker Compose",
@@ -55,48 +69,62 @@ export const NewScanModal: React.FC<NewScanModalProps> = ({
 
   const handleStart = () => {
     setIsScanning(true);
-    setScanStep("Discovery: Parsing target configurations...");
+    setProgress(0);
+    setScanStep("Discovery: Locating container specs and volume mounts...");
 
-    if (progressBarRef.current) {
-      const bar = { width: 0 };
-      animate(bar, {
-        width: 100,
-        ease: "inOutQuad",
-        duration: 2200,
-        onUpdate: () => {
-          if (progressBarRef.current) {
-            progressBarRef.current.style.width = `${bar.width}%`;
-          }
-          if (bar.width < 30) {
-            setScanStep("Discovery: Locating container specs and volume mounts...");
-          } else if (bar.width < 70) {
-            setScanStep("Analysis: Evaluating 8 CIS Docker Benchmark security rules...");
-          } else {
-            setScanStep("Reporting: Normalizing findings & scoring hardening posture...");
-          }
-        },
-        onComplete: () => {
-          setTimeout(() => {
-            setIsScanning(false);
-            onScanCompleted(selectedType, targetPath);
-            onClose();
-          }, 300);
-        },
-      });
-    }
+    if (timerRef.current) clearInterval(timerRef.current);
 
-    if (radarRef.current) {
-      animate(radarRef.current, {
-        rotate: [0, 720],
-        ease: "linear",
-        duration: 2200,
-      });
+    let current = 0;
+    timerRef.current = setInterval(() => {
+      // Proportional incremental progression
+      current += Math.floor(Math.random() * 4) + 2; // ~2-5% increments
+      if (current >= 100) {
+        current = 100;
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+        setProgress(100);
+        setScanStep("Completed! Synthesizing vulnerability findings...");
+
+        setTimeout(() => {
+          setIsScanning(false);
+          setProgress(0);
+          onScanCompleted(selectedType, targetPath);
+          onClose();
+        }, 500);
+      } else {
+        setProgress(current);
+        if (current < 25) {
+          setScanStep("Discovery: Parsing target configurations & dependencies...");
+        } else if (current < 55) {
+          setScanStep("Inspection: Checking non-root users, capabilities & mounts...");
+        } else if (current < 85) {
+          setScanStep("Policy Engine: Auditing 8 CIS Docker Benchmark controls...");
+        } else {
+          setScanStep("Synthesis: Normalizing findings & scoring hardening posture...");
+        }
+      }
+    }, 60);
+  };
+
+  const handleCancel = () => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
     }
+    setIsScanning(false);
+    setProgress(0);
+    setScanStep("");
+    onClose();
   };
 
   useEffect(() => {
     if (!isOpen) {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
       setIsScanning(false);
+      setProgress(0);
       setScanStep("");
     }
   }, [isOpen]);
@@ -104,19 +132,32 @@ export const NewScanModal: React.FC<NewScanModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm">
-      <div className="relative w-full max-w-lg bg-sentry-surface border border-sentry-border rounded-xl shadow-2xl overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+      <div className="relative w-full max-w-lg bg-slate-900/95 border border-white/[0.08] rounded-2xl shadow-2xl overflow-hidden">
         {/* Modal Header */}
-        <div className="px-6 py-4 border-b border-sentry-border bg-sentry-darkest/60 flex items-center justify-between">
+        <div className="px-6 py-4 border-b border-white/[0.06] bg-slate-950/60 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
               <TbShieldCheck className="w-4 h-4 text-emerald-400" />
             </div>
             <div>
-              <h3 className="text-sm font-semibold text-sentry-text">Launch Security Audit</h3>
-              <p className="text-[11px] text-sentry-muted">Select target resources to analyze for misconfigurations</p>
+              <h3 className="text-sm font-semibold text-white">
+                Launch Security Audit
+              </h3>
+              <p className="text-[11px] text-slate-400">
+                Analyze Docker configurations against CIS hardening benchmarks
+              </p>
             </div>
           </div>
+
+          {/* Close / Cancel Button */}
+          <button
+            onClick={handleCancel}
+            className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/[0.06] transition-colors"
+            title="Cancel and close"
+          >
+            <FiX className="w-4 h-4" />
+          </button>
         </div>
 
         {/* Modal Body */}
@@ -124,7 +165,7 @@ export const NewScanModal: React.FC<NewScanModalProps> = ({
           {!isScanning ? (
             <>
               <div className="space-y-2">
-                <label className="text-xs font-mono uppercase text-sentry-muted tracking-wider block">
+                <label className="text-xs font-mono uppercase text-slate-400 tracking-wider block">
                   Audit Target Type
                 </label>
                 <div className="grid grid-cols-1 gap-2.5">
@@ -134,26 +175,36 @@ export const NewScanModal: React.FC<NewScanModalProps> = ({
                     return (
                       <div
                         key={item.type}
-                        onClick={() => handleSelectType(item.type, item.defaultTarget)}
-                        className={`p-3.5 rounded-lg border cursor-pointer transition-all flex items-start gap-3 ${
+                        onClick={() =>
+                          handleSelectType(item.type, item.defaultTarget)
+                        }
+                        className={`p-3.5 rounded-xl border cursor-pointer transition-all flex items-start gap-3 ${
                           isSelected
-                            ? "bg-emerald-500/10 border-emerald-500 text-white"
-                            : "bg-sentry-darkest/60 border-sentry-border hover:border-slate-700"
+                            ? "bg-emerald-500/10 border-emerald-500/50 text-white shadow-sm"
+                            : "bg-slate-950/50 border-white/[0.05] hover:border-white/[0.12]"
                         }`}
                       >
                         <div
-                          className={`p-2 rounded shrink-0 ${
-                            isSelected ? "bg-emerald-500/20 text-emerald-400" : "bg-sentry-surface text-sentry-muted"
+                          className={`p-2 rounded-lg shrink-0 ${
+                            isSelected
+                              ? "bg-emerald-500/20 text-emerald-400"
+                              : "bg-slate-800/60 text-slate-400"
                           }`}
                         >
                           <Icon className="w-4 h-4" />
                         </div>
                         <div className="flex-1">
                           <div className="flex items-center justify-between">
-                            <span className="text-xs font-semibold text-sentry-text">{item.label}</span>
-                            {isSelected && <FiCheckCircle className="w-3.5 h-3.5 text-emerald-400" />}
+                            <span className="text-xs font-semibold text-slate-200">
+                              {item.label}
+                            </span>
+                            {isSelected && (
+                              <FiCheckCircle className="w-3.5 h-3.5 text-emerald-400" />
+                            )}
                           </div>
-                          <p className="text-[11px] text-sentry-muted mt-0.5">{item.desc}</p>
+                          <p className="text-[11px] text-slate-400 mt-0.5">
+                            {item.desc}
+                          </p>
                         </div>
                       </div>
                     );
@@ -163,66 +214,81 @@ export const NewScanModal: React.FC<NewScanModalProps> = ({
 
               {/* Target Path Input */}
               <div className="space-y-1.5">
-                <label className="text-xs font-mono uppercase text-sentry-muted tracking-wider block">
+                <label className="text-xs font-mono uppercase text-slate-400 tracking-wider block">
                   Path or Socket URI
                 </label>
                 <input
                   type="text"
                   value={targetPath}
                   onChange={(e) => setTargetPath(e.target.value)}
-                  className="w-full px-3 py-2 text-xs font-mono rounded bg-sentry-darkest border border-sentry-border text-sentry-text focus:outline-none focus:border-emerald-500"
+                  className="w-full px-3.5 py-2 text-xs font-mono rounded-lg bg-slate-950/70 border border-white/[0.08] text-slate-200 focus:outline-none focus:border-emerald-500/60"
                 />
               </div>
             </>
           ) : (
-            /* Animated Scan Progress View */
-            <div className="py-8 flex flex-col items-center justify-center text-center space-y-5">
-              <div className="relative w-20 h-20 flex items-center justify-center">
-                <svg
-                  ref={radarRef}
-                  className="w-20 h-20 text-emerald-500/30"
-                  viewBox="0 0 100 100"
-                >
-                  <circle cx="50" cy="50" r="45" fill="none" stroke="currentColor" strokeWidth="2" strokeDasharray="6 6" />
-                  <line x1="50" y1="50" x2="50" y2="5" stroke="#10B981" strokeWidth="2" strokeLinecap="round" />
-                </svg>
-                <TbRadar2 className="w-8 h-8 text-emerald-400 absolute" />
+            /* 3D Isometric Loader & Proportional Progress */
+            <div className="py-6 flex flex-col items-center justify-center text-center space-y-6">
+              {/* 3D Isometric Box Loader */}
+              <div className="h-40 flex items-center justify-center overflow-hidden">
+                <Loader3D className="scale-90" />
               </div>
 
-              <div className="space-y-1">
-                <h4 className="text-sm font-semibold text-sentry-text tracking-wide">
+              <div className="space-y-1.5 w-full">
+                <h4 className="text-sm font-semibold text-white tracking-wide">
                   Auditing Container Security Posture
                 </h4>
-                <p className="text-xs font-mono text-emerald-400 animate-pulse">
+                <p className="text-xs font-mono text-sky-400">
                   {scanStep}
                 </p>
               </div>
 
-              <div className="w-full bg-sentry-darkest rounded-full h-1.5 overflow-hidden border border-sentry-border">
-                <div
-                  ref={progressBarRef}
-                  className="bg-emerald-500 h-full w-0 shadow-[0_0_10px_#10B981]"
-                />
+              {/* Proportional Progress Bar with Percentage */}
+              <div className="w-full space-y-1.5">
+                <div className="flex items-center justify-between text-xs font-mono px-1">
+                  <span className="text-slate-400 text-[11px]">Audit Execution</span>
+                  <span className="text-sky-400 font-bold">{progress}%</span>
+                </div>
+                <div className="w-full bg-slate-950 rounded-full h-2.5 overflow-hidden border border-white/[0.08] relative">
+                  <div
+                    className="bg-gradient-to-r from-sky-500 to-cyan-400 h-full rounded-full transition-all duration-100 ease-out shadow-[0_0_12px_rgba(56,189,248,0.7)]"
+                    style={{ width: `${progress}%` }}
+                  />
+                </div>
               </div>
+
+              {/* Active In-Scan Cancellation Button */}
+              <button
+                type="button"
+                onClick={handleCancel}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-red-500/10 border border-red-500/25 text-red-400 hover:bg-red-500/20 text-xs font-semibold font-mono transition-colors cursor-pointer"
+              >
+                <FiStopCircle className="w-4 h-4" />
+                Cancel Audit
+              </button>
             </div>
           )}
         </div>
 
         {/* Modal Footer */}
-        <div className="px-6 py-3.5 border-t border-sentry-border bg-sentry-darkest/40 flex items-center justify-end gap-2.5">
-          <Button variant="ghost" size="sm" onClick={onClose} disabled={isScanning}>
+        <div className="px-6 py-3.5 border-t border-white/[0.06] bg-slate-950/60 flex items-center justify-end gap-2.5">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleCancel}
+          >
             Cancel
           </Button>
-          <CloudButton
-            variant="cyan"
-            size="sm"
-            onClick={handleStart}
-            disabled={isScanning}
-            loading={isScanning}
-            icon={<FiPlay className="w-3.5 h-3.5 fill-current" />}
-          >
-            {isScanning ? "Scanning..." : "Execute Audit"}
-          </CloudButton>
+
+          {!isScanning && (
+            <CloudButton
+              variant="cyan"
+              size="sm"
+              onClick={handleStart}
+              icon={<FiPlay className="w-3.5 h-3.5 fill-current" />}
+            >
+              Execute Audit
+            </CloudButton>
+          )}
         </div>
       </div>
     </div>
