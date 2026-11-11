@@ -1,5 +1,5 @@
 import os
-from flask import Flask, jsonify, request, Response
+from flask import Flask, jsonify, request, Response, send_from_directory
 from flask_cors import CORS
 from dataclasses import asdict
 
@@ -12,6 +12,7 @@ CORS(app, resources={r"/api/*": {"origins": "*"}})
 
 # Initialize the Security Audit Engine rooted at the workspace
 WORKSPACE_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+FRONTEND_DIST = os.path.join(WORKSPACE_ROOT, "frontend", "dist")
 engine = SecurityAuditEngine(WORKSPACE_ROOT)
 
 
@@ -135,6 +136,27 @@ def export_report():
         "score": stats.security_score,
         "summary": asdict(stats.findings_summary),
         "findings": [f.to_dict() for f in findings],
+    })
+
+
+@app.route("/", defaults={"path": ""})
+@app.route("/<path:path>")
+def serve_frontend(path):
+    if path.startswith("api/") or path == "health":
+        return jsonify({"error": "Endpoint not found"}), 404
+
+    target_file = os.path.join(FRONTEND_DIST, path)
+    if path != "" and os.path.exists(target_file) and os.path.isfile(target_file):
+        return send_from_directory(FRONTEND_DIST, path)
+
+    index_file = os.path.join(FRONTEND_DIST, "index.html")
+    if os.path.exists(index_file):
+        return send_from_directory(FRONTEND_DIST, "index.html")
+
+    return jsonify({
+        "status": "online",
+        "service": "docksentry-audit-engine",
+        "message": "Audit Engine API is active. Launch Vite with 'npm run dev' or build frontend.",
     })
 
 
