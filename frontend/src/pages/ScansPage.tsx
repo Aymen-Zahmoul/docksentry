@@ -67,11 +67,11 @@ export const ScansPage: React.FC = () => {
       </div>
 
       {/* Scans Table */}
-      <div className="rounded-xl bg-sentry-surface/90 backdrop-blur-md border border-sentry-border/80 shadow-sm overflow-hidden">
+      <div className="rounded-2xl bg-slate-900/30 backdrop-blur-md border border-white/[0.05] overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-sentry-border bg-sentry-darkest/60 text-[11px] font-mono text-sentry-muted uppercase tracking-wider">
+              <tr className="border-b border-white/[0.05] bg-slate-950/40 text-[10px] font-mono text-slate-400 uppercase tracking-wider">
                 <th className="py-3 px-4">Scan ID</th>
                 <th className="py-3 px-4">Target Resource</th>
                 <th className="py-3 px-4">Type</th>

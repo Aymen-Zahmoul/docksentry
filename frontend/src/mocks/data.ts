@@ -20,6 +20,14 @@ export const mockDashboardStats: DashboardStats = {
     low: 4,
     info: 2,
   },
+  category_posture: [
+    { name: "Identity (Root/UID)", pass_rate: 64, violations: 5, color: "#F97316" },
+    { name: "Privileges Mode", pass_rate: 75, violations: 2, color: "#EF4444" },
+    { name: "Volume Mounts", pass_rate: 72, violations: 2, color: "#EF4444" },
+    { name: "Linux Capabilities", pass_rate: 78, violations: 3, color: "#F97316" },
+    { name: "Network & 0.0.0.0", pass_rate: 60, violations: 4, color: "#F59E0B" },
+    { name: "Filesystem Immutability", pass_rate: 85, violations: 1, color: "#10B981" },
+  ],
   last_scan_time: "2026-11-10T14:15:00Z",
   top_issues: [
     {

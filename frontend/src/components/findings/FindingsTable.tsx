@@ -66,7 +66,7 @@ export const FindingsTable: React.FC<FindingsTableProps> = ({
   return (
     <div className="space-y-4">
       {/* Filters Toolbar */}
-      <div className="p-4 rounded-xl bg-slate-900/60 backdrop-blur-md border border-slate-800/80 shadow-sm space-y-3">
+      <div className="p-4 rounded-2xl bg-slate-900/30 backdrop-blur-md border border-white/[0.05] space-y-3">
         <div className="flex flex-col md:flex-row items-center gap-3">
           {/* Search Input */}
           <div className="relative flex-1 w-full">
@@ -76,7 +76,7 @@ export const FindingsTable: React.FC<FindingsTableProps> = ({
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search findings by rule ID, title, evidence, resource..."
-              className="w-full pl-9 pr-4 py-2 text-xs font-mono rounded-lg bg-slate-950/70 border border-slate-800 text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-slate-600 transition-colors"
+              className="w-full pl-9 pr-4 py-2 text-xs font-mono rounded-lg bg-slate-950/60 border border-white/[0.06] text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-slate-500 transition-colors"
             />
           </div>
 
@@ -86,7 +86,7 @@ export const FindingsTable: React.FC<FindingsTableProps> = ({
             <select
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value as any)}
-              className="px-3 py-2 text-xs font-mono rounded-lg bg-slate-950/70 border border-slate-800 text-slate-200 focus:outline-none focus:border-slate-600 cursor-pointer"
+              className="px-3 py-2 text-xs font-mono rounded-lg bg-slate-950/60 border border-white/[0.06] text-slate-200 focus:outline-none focus:border-slate-500 cursor-pointer"
             >
               {categories.map((c) => (
                 <option key={c} value={c}>
@@ -98,7 +98,7 @@ export const FindingsTable: React.FC<FindingsTableProps> = ({
         </div>
 
         {/* Severity Pills & Status Filter */}
-        <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-850">
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-white/[0.05]">
           <div className="flex flex-wrap items-center gap-1.5">
             <span className="text-[11px] font-mono uppercase tracking-wider text-slate-400 mr-1">
               Severity:
@@ -112,7 +112,7 @@ export const FindingsTable: React.FC<FindingsTableProps> = ({
                   className={`px-2.5 py-1 text-xs font-mono rounded-md border transition-all ${
                     active
                       ? "bg-slate-700 text-white border-slate-600"
-                      : "bg-slate-950/70 text-slate-400 border-slate-800 hover:text-slate-200"
+                      : "bg-slate-950/50 text-slate-400 border-white/[0.05] hover:text-slate-200"
                   }`}
                 >
                   {sev}
@@ -134,7 +134,7 @@ export const FindingsTable: React.FC<FindingsTableProps> = ({
                   className={`px-2 py-0.5 text-xs font-mono rounded border transition-all ${
                     active
                       ? "bg-slate-700 text-white border-slate-500"
-                      : "bg-slate-950/70 text-slate-400 border-slate-800 hover:text-slate-200"
+                      : "bg-slate-950/50 text-slate-400 border-white/[0.05] hover:text-slate-200"
                   }`}
                 >
                   {st}
@@ -146,11 +146,11 @@ export const FindingsTable: React.FC<FindingsTableProps> = ({
       </div>
 
       {/* Findings Table */}
-      <div className="rounded-xl bg-slate-900/60 backdrop-blur-md border border-slate-800/80 shadow-sm overflow-hidden">
+      <div className="rounded-2xl bg-slate-900/30 backdrop-blur-md border border-white/[0.05] overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-slate-800 bg-slate-950/60 text-[11px] font-mono text-slate-400 uppercase tracking-wider">
+              <tr className="border-b border-white/[0.05] bg-slate-950/40 text-[10px] font-mono text-slate-400 uppercase tracking-wider">
                 <th className="py-3 px-4">Rule</th>
                 <th className="py-3 px-4">Severity</th>
                 <th className="py-3 px-4">Issue Title & Evidence</th>

@@ -13,7 +13,7 @@ export const Card: React.FC<CardProps> = ({
   return (
     <div
       className={cn(
-        "rounded-xl bg-slate-900/60 backdrop-blur-md border border-slate-800/80 shadow-sm transition-colors hover:border-slate-700/80",
+        "rounded-2xl bg-slate-900/30 backdrop-blur-md border border-white/[0.05] transition-colors hover:border-white/[0.1]",
         className
       )}
       {...props}

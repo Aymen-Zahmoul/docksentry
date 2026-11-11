@@ -1,10 +1,9 @@
 import React, { useEffect, useState } from "react";
-import { SecurityScoreGauge } from "../components/dashboard/SecurityScoreGauge";
-import { StatMetricCards } from "../components/dashboard/StatMetricCards";
-import { BklitBarChart, BklitBarItem } from "../components/ui/BklitChart";
-import { BklitComplianceRadar } from "../components/ui/BklitComplianceRadar";
-import { TopIssuesList } from "../components/dashboard/TopIssuesList";
-import { RecentScansWidget } from "../components/dashboard/RecentScansWidget";
+import { PostureHorizon } from "../components/dashboard/PostureHorizon";
+import { RiskSpectrum } from "../components/dashboard/RiskSpectrum";
+import { HardeningPostureList } from "../components/dashboard/HardeningPostureList";
+import { FluidIssuesStream } from "../components/dashboard/FluidIssuesStream";
+import { FluidRecentScans } from "../components/dashboard/FluidRecentScans";
 import { getDashboardStats } from "../services/dashboard.service";
 import { getScans } from "../services/scans.service";
 import { DashboardStats } from "../types/dashboard";
@@ -35,84 +34,40 @@ export const DashboardPage: React.FC = () => {
 
   if (loading || !stats) {
     return (
-      <div className="h-full flex items-center justify-center font-mono text-xs text-sentry-muted">
+      <div className="h-full flex items-center justify-center font-mono text-xs text-slate-400">
         <span className="animate-pulse">Loading DOCKSENTRY audit metrics...</span>
       </div>
     );
   }
 
-  // Format Bklit UI Chart Items
-  const bklitItems: BklitBarItem[] = [
-    {
-      id: "critical",
-      label: "Critical",
-      value: stats.findings_summary.critical,
-      color: "#EF4444",
-      sublabel: "Privileged / Sockets",
-    },
-    {
-      id: "high",
-      label: "High",
-      value: stats.findings_summary.high,
-      color: "#F97316",
-      sublabel: "Root / Capabilities",
-    },
-    {
-      id: "medium",
-      label: "Medium",
-      value: stats.findings_summary.medium,
-      color: "#F59E0B",
-      sublabel: "0.0.0.0 / Writable FS",
-    },
-    {
-      id: "low",
-      label: "Low",
-      value: stats.findings_summary.low,
-      color: "#3B82F6",
-      sublabel: "Healthchecks",
-    },
-    {
-      id: "info",
-      label: "Info",
-      value: stats.findings_summary.info,
-      color: "#64748B",
-      sublabel: "Best Practices",
-    },
-  ];
-
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-8">
+    <div className="space-y-6 max-w-7xl mx-auto pb-12">
       {/* Page Title & Context */}
       <div>
-        <h1 className="text-xl font-bold tracking-tight text-sentry-text">
-          Security Posture Overview
+        <h1 className="text-xl font-bold tracking-tight text-white">
+          Security Posture
         </h1>
-        <p className="text-xs text-sentry-muted mt-1">
-          Automated container configuration audit across Dockerfiles, Compose specs, and running daemons.
+        <p className="text-xs text-slate-400 mt-0.5">
+          Real-time hardening telemetry across Dockerfiles, Compose services, and container runtime sockets.
         </p>
       </div>
 
-      {/* Security Hardening Score Banner */}
-      <SecurityScoreGauge score={stats.security_score} />
+      {/* 1. Fluid Master Hero: Posture Horizon + Borderless Telemetry Ribbon */}
+      <PostureHorizon stats={stats} />
 
-      {/* 4 Stat Metric Cards */}
-      <StatMetricCards stats={stats} />
+      {/* 2. Interactive Risk Spectrum Bar */}
+      <RiskSpectrum summary={stats.findings_summary} />
 
-      {/* Bklit UI Charts Grid */}
+      {/* 3. Fluid Two-Column Editorial Stream: Hardening Domains & Recurring Issues */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <BklitBarChart
-          items={bklitItems}
-          title="Bklit Telemetry: Findings by Severity"
-          subtitle="Real-time configuration risk distribution"
-        />
-        <BklitComplianceRadar />
+        <HardeningPostureList categories={stats.category_posture || []} />
+        <FluidIssuesStream issues={stats.top_issues} />
       </div>
 
-      {/* Top Issues List & Recent Scans Widget */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <TopIssuesList issues={stats.top_issues} />
-        <RecentScansWidget scans={scans} />
-      </div>
+      {/* 4. Fluid Recent Audits Stream */}
+      <FluidRecentScans scans={scans} />
     </div>
   );
 };
+
+export default DashboardPage;

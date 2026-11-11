@@ -41,7 +41,7 @@ export const RulesCatalog: React.FC<RulesCatalogProps> = ({ rules, onToggleRule 
   return (
     <div className="space-y-4">
       {/* Search & Category Filter */}
-      <div className="p-4 rounded-xl bg-slate-900/60 backdrop-blur-md border border-slate-800/80 shadow-sm flex flex-col md:flex-row items-center gap-4 justify-between">
+      <div className="p-4 rounded-2xl bg-slate-900/30 backdrop-blur-md border border-white/[0.05] flex flex-col md:flex-row items-center gap-4 justify-between">
         <div className="relative flex-1 w-full">
           <FiSearch className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
           <input
@@ -49,7 +49,7 @@ export const RulesCatalog: React.FC<RulesCatalogProps> = ({ rules, onToggleRule 
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search rules by ID (e.g. DS002), CIS reference, title..."
-            className="w-full pl-9 pr-4 py-2 text-xs font-mono rounded-lg bg-slate-950/70 border border-slate-800 text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-slate-600"
+            className="w-full pl-9 pr-4 py-2 text-xs font-mono rounded-lg bg-slate-950/60 border border-white/[0.06] text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-slate-500"
           />
         </div>
 
@@ -61,7 +61,7 @@ export const RulesCatalog: React.FC<RulesCatalogProps> = ({ rules, onToggleRule 
               className={`px-2.5 py-1 text-xs font-mono rounded-md border transition-all ${
                 selectedCategory === cat
                   ? "bg-slate-700 text-white border-slate-600"
-                  : "bg-slate-950/70 text-slate-400 border-slate-800 hover:text-slate-200"
+                  : "bg-slate-950/50 text-slate-400 border-white/[0.05] hover:text-slate-200"
               }`}
             >
               {cat}
@@ -75,10 +75,10 @@ export const RulesCatalog: React.FC<RulesCatalogProps> = ({ rules, onToggleRule 
         {filtered.map((rule) => (
           <div
             key={rule.id}
-            className={`p-5 rounded-xl bg-slate-900/60 backdrop-blur-md border transition-colors ${
+            className={`p-5 rounded-2xl bg-slate-900/30 backdrop-blur-md border transition-colors ${
               rule.enabled
-                ? "border-slate-800/80 hover:border-slate-700/80 shadow-sm"
-                : "border-slate-900 opacity-60 bg-slate-950/40"
+                ? "border-white/[0.06] hover:border-white/[0.12]"
+                : "border-white/[0.03] opacity-60 bg-slate-950/20"
             }`}
           >
             {/* Header: Rule Code + Severity + Switch */}

@@ -124,7 +124,7 @@ export const ReportsPage: React.FC = () => {
       {/* Export Action Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* SARIF 2.1.0 */}
-        <div className="p-5 rounded-xl bg-slate-900/60 backdrop-blur-md border border-slate-800/80 shadow-sm flex flex-col justify-between space-y-4">
+        <div className="p-5 rounded-2xl bg-slate-900/30 backdrop-blur-md border border-white/[0.05] flex flex-col justify-between space-y-4">
           <div className="space-y-2">
             <div className="flex items-center gap-2">
               <TbReportAnalytics className="w-5 h-5 text-emerald-400" />
@@ -145,7 +145,7 @@ export const ReportsPage: React.FC = () => {
         </div>
 
         {/* JSON Raw Feed */}
-        <div className="p-5 rounded-xl bg-slate-900/60 backdrop-blur-md border border-slate-800/80 shadow-sm flex flex-col justify-between space-y-4">
+        <div className="p-5 rounded-2xl bg-slate-900/30 backdrop-blur-md border border-white/[0.05] flex flex-col justify-between space-y-4">
           <div className="space-y-2">
             <div className="flex items-center gap-2">
               <VscJson className="w-5 h-5 text-blue-400" />
@@ -166,7 +166,7 @@ export const ReportsPage: React.FC = () => {
         </div>
 
         {/* Markdown Brief */}
-        <div className="p-5 rounded-xl bg-slate-900/60 backdrop-blur-md border border-slate-800/80 shadow-sm flex flex-col justify-between space-y-4">
+        <div className="p-5 rounded-2xl bg-slate-900/30 backdrop-blur-md border border-white/[0.05] flex flex-col justify-between space-y-4">
           <div className="space-y-2">
             <div className="flex items-center gap-2">
               <FiFileText className="w-5 h-5 text-amber-400" />
