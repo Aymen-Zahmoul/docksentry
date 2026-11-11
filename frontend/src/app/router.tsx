@@ -1,5 +1,6 @@
 import { createBrowserRouter, Navigate } from "react-router-dom";
 import { AppLayout } from "../components/layout/AppLayout";
+import { RouteErrorFallback } from "../components/common/RouteErrorFallback";
 import { DashboardPage } from "../pages/DashboardPage";
 import { FindingsPage } from "../pages/FindingsPage";
 import { ContainersPage } from "../pages/ContainersPage";
@@ -12,6 +13,7 @@ export const router = createBrowserRouter([
   {
     path: "/",
     element: <AppLayout />,
+    errorElement: <RouteErrorFallback />,
     children: [
       { index: true, element: <DashboardPage /> },
       { path: "findings", element: <FindingsPage /> },

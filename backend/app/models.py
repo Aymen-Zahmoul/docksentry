@@ -141,9 +141,32 @@ class SecurityRule:
     category: str
     benchmark_id: str
     enabled: bool = True
+    code: Optional[str] = None
+    cis_benchmark: Optional[str] = None
+    rationale: Optional[str] = None
+    impact: Optional[str] = None
+    remediation_summary: Optional[str] = None
+    applicable_to: List[str] = field(default_factory=lambda: ["dockerfile", "compose", "runtime"])
+
+    def __post_init__(self):
+        if not self.code:
+            self.code = self.id
+        if not self.cis_benchmark:
+            self.cis_benchmark = self.benchmark_id
+        if not self.rationale:
+            self.rationale = self.description
+        if not self.remediation_summary:
+            self.remediation_summary = self.description
 
     def to_dict(self) -> Dict[str, Any]:
-        return asdict(self)
+        data = asdict(self)
+        if not data.get("code"):
+            data["code"] = self.id
+        if not data.get("cis_benchmark"):
+            data["cis_benchmark"] = self.benchmark_id
+        if not data.get("applicable_to"):
+            data["applicable_to"] = ["dockerfile", "compose", "runtime"]
+        return data
 
 
 @dataclass

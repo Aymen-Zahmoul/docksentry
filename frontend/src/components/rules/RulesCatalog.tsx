@@ -28,11 +28,15 @@ export const RulesCatalog: React.FC<RulesCatalogProps> = ({ rules, onToggleRule 
     if (selectedCategory !== "ALL" && r.category !== selectedCategory) return false;
     if (search) {
       const q = search.toLowerCase();
+      const code = (r.code || r.id || "").toLowerCase();
+      const title = (r.title || "").toLowerCase();
+      const description = (r.description || "").toLowerCase();
+      const cis = (r.cis_benchmark || r.benchmark_id || "").toLowerCase();
       return (
-        r.title.toLowerCase().includes(q) ||
-        r.code.toLowerCase().includes(q) ||
-        r.description.toLowerCase().includes(q) ||
-        (r.cis_benchmark && r.cis_benchmark.toLowerCase().includes(q))
+        title.includes(q) ||
+        code.includes(q) ||
+        description.includes(q) ||
+        cis.includes(q)
       );
     }
     return true;
@@ -84,8 +88,8 @@ export const RulesCatalog: React.FC<RulesCatalogProps> = ({ rules, onToggleRule 
             {/* Header: Rule Code + Severity + Switch */}
             <div className="flex items-center justify-between gap-3 mb-2.5">
               <div className="flex items-center gap-2">
-                <span className="font-mono text-sm font-bold text-slate-200 px-2 py-0.5 rounded bg-slate-800 border border-slate-700">
-                  {rule.code}
+                <span className="font-mono text-xs font-bold text-slate-200 px-2 py-0.5 rounded bg-slate-800 border border-slate-700">
+                  {rule.code || rule.id}
                 </span>
                 <SeverityBadge severity={rule.severity} size="sm" />
               </div>
@@ -112,22 +116,24 @@ export const RulesCatalog: React.FC<RulesCatalogProps> = ({ rules, onToggleRule 
             </p>
 
             {/* Security Rationale / Attack Vector */}
-            <div className="mt-3 p-3 rounded-lg bg-slate-950/60 border border-slate-850 text-xs text-slate-400 space-y-1 font-mono">
+            <div className="mt-3 p-3 rounded-lg bg-slate-950/60 border border-slate-800/60 text-xs text-slate-400 space-y-1 font-mono">
               <div className="flex items-center gap-1.5 text-amber-400 font-semibold text-[11px]">
                 <FiAlertTriangle className="w-3 h-3" />
                 <span>Security Rationale:</span>
               </div>
-              <p className="text-slate-300 leading-relaxed font-sans">{rule.rationale}</p>
+              <p className="text-slate-300 leading-relaxed font-sans">
+                {rule.rationale || rule.description}
+              </p>
             </div>
 
             {/* Footer Metadata */}
             <div className="mt-4 pt-3 border-t border-slate-800/60 flex items-center justify-between text-[11px] font-mono text-slate-400">
               <span className="flex items-center gap-1 text-slate-300">
                 <FiBookOpen className="w-3 h-3 text-slate-400" />
-                {rule.cis_benchmark}
+                {rule.cis_benchmark || rule.benchmark_id || "CIS Docker Benchmark"}
               </span>
               <span className="text-slate-500 uppercase">
-                Targets: {rule.applicable_to.join(", ")}
+                Targets: {(rule.applicable_to && rule.applicable_to.length > 0 ? rule.applicable_to : ["dockerfile", "compose", "runtime"]).join(", ")}
               </span>
             </div>
           </div>
