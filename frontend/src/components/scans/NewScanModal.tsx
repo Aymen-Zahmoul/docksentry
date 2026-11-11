@@ -241,17 +241,32 @@ export const NewScanModal: React.FC<NewScanModalProps> = ({
                 </p>
               </div>
 
-              {/* Proportional Progress Bar with Percentage */}
-              <div className="w-full space-y-1.5">
+              {/* 3D Volumetric Cylinder Progress Bar */}
+              <div className="w-full space-y-2">
                 <div className="flex items-center justify-between text-xs font-mono px-1">
-                  <span className="text-slate-400 text-[11px]">Audit Execution</span>
-                  <span className="text-sky-400 font-bold">{progress}%</span>
+                  <span className="text-slate-400 text-[11px] uppercase tracking-wider">Audit Pipeline Progress</span>
+                  <span className="text-sky-300 font-bold text-sm tracking-tight">{progress}%</span>
                 </div>
-                <div className="w-full bg-slate-950 rounded-full h-2.5 overflow-hidden border border-white/[0.08] relative">
+
+                {/* 3D Recessed Track with Inner Depth Shadow */}
+                <div className="w-full bg-slate-950/90 rounded-full h-4 p-0.5 border border-white/[0.1] shadow-[inset_0_2px_5px_rgba(0,0,0,0.9),0_1px_1px_rgba(255,255,255,0.06)] relative overflow-hidden">
+                  {/* 3D Glowing Volumetric Pill */}
                   <div
-                    className="bg-gradient-to-r from-sky-500 to-cyan-400 h-full rounded-full transition-all duration-100 ease-out shadow-[0_0_12px_rgba(56,189,248,0.7)]"
-                    style={{ width: `${progress}%` }}
-                  />
+                    className="h-full rounded-full transition-all duration-100 ease-out relative"
+                    style={{
+                      width: `${progress}%`,
+                      background: "linear-gradient(180deg, #7dd3fc 0%, #38bdf8 45%, #0284c7 85%, #0369a1 100%)",
+                      boxShadow: "inset 0 1px 1px rgba(255,255,255,0.8), inset 0 -1.5px 2px rgba(0,0,0,0.4), 0 0 14px rgba(56,189,248,0.8)",
+                    }}
+                  >
+                    {/* Top Cylindrical Specular Glare */}
+                    <div className="absolute inset-x-1 top-0 h-[40%] rounded-full bg-white/50 blur-[0.3px] pointer-events-none" />
+
+                    {/* Leading 3D Spark Tip */}
+                    {progress > 2 && (
+                      <div className="absolute right-0 top-0 bottom-0 w-2.5 rounded-full bg-white shadow-[0_0_10px_#ffffff]" />
+                    )}
+                  </div>
                 </div>
               </div>
 
