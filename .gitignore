@@ -62,3 +62,4 @@ htmlcov/
 # OS / Temp
 *.tmp
 *.log
+*.docksentry.bak
