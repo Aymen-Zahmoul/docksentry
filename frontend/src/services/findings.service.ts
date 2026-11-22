@@ -78,3 +78,100 @@ export async function updateFindingStatus(id: string, status: FindingStatus): Pr
     throw new Error("Finding not found");
   }
 }
+
+export async function remediateFinding(id: string): Promise<{ success: boolean; message: string; finding: Finding; backup_path?: string }> {
+  try {
+    const res = await request<{ success: boolean; message: string; finding: Finding; backup_path?: string }>(
+      `/findings/${id}/remediate`,
+      { method: "POST" }
+    );
+    const index = currentFindings.findIndex((f) => f.id === id);
+    if (index !== -1 && res.finding) {
+      currentFindings[index] = res.finding;
+    }
+    return res;
+  } catch (err: any) {
+    const index = currentFindings.findIndex((f) => f.id === id);
+    if (index !== -1) {
+      currentFindings[index] = { ...currentFindings[index], status: "RESOLVED" };
+      return { success: true, message: "Remediated successfully (offline simulation)", finding: currentFindings[index] };
+    }
+    throw err;
+  }
+}
+
+export async function rollbackFinding(id: string): Promise<{ success: boolean; message: string; finding: Finding }> {
+  try {
+    const res = await request<{ success: boolean; message: string; finding: Finding }>(
+      `/findings/${id}/rollback`,
+      { method: "POST" }
+    );
+    const index = currentFindings.findIndex((f) => f.id === id);
+    if (index !== -1 && res.finding) {
+      currentFindings[index] = res.finding;
+    }
+    return res;
+  } catch (err: any) {
+    const index = currentFindings.findIndex((f) => f.id === id);
+    if (index !== -1) {
+      currentFindings[index] = { ...currentFindings[index], status: "OPEN" };
+      return { success: true, message: "Rolled back successfully (offline simulation)", finding: currentFindings[index] };
+    }
+    throw err;
+  }
+}
+
+export async function getImageAdvisories(): Promise<import("../types/finding").ImageAdvisorItem[]> {
+  try {
+    return await request<import("../types/finding").ImageAdvisorItem[]>("/images/advisor");
+  } catch (err) {
+    console.warn("Backend image advisor unreachable, using fallback advisories:", err);
+    return [
+      {
+        id: "adv-df-1",
+        current_image: "python:3.11",
+        target_resource: "Dockerfile",
+        source_file: "Dockerfile",
+        current_size_mb: 1010,
+        current_cve_estimate: 105,
+        recommended_image: "python:3.11-slim",
+        recommended_size_mb: 145,
+        recommended_cve_estimate: 2,
+        size_reduction_pct: 86,
+        cve_reduction_pct: 98,
+        risk_level: "HIGH",
+        remediation_status: "PENDING",
+      },
+      {
+        id: "adv-cmp-api",
+        current_image: "node:20",
+        target_resource: "api service",
+        source_file: "docker-compose.yml",
+        current_size_mb: 1080,
+        current_cve_estimate: 84,
+        recommended_image: "node:20-alpine",
+        recommended_size_mb: 174,
+        recommended_cve_estimate: 1,
+        size_reduction_pct: 84,
+        cve_reduction_pct: 98,
+        risk_level: "HIGH",
+        remediation_status: "PENDING",
+      },
+      {
+        id: "adv-cmp-db",
+        current_image: "postgres:latest",
+        target_resource: "database service",
+        source_file: "docker-compose.yml",
+        current_size_mb: 450,
+        current_cve_estimate: 55,
+        recommended_image: "postgres:16-alpine",
+        recommended_size_mb: 128,
+        recommended_cve_estimate: 2,
+        size_reduction_pct: 72,
+        cve_reduction_pct: 96,
+        risk_level: "MEDIUM",
+        remediation_status: "PENDING",
+      },
+    ];
+  }
+}

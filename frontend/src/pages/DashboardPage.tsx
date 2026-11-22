@@ -4,6 +4,7 @@ import { RiskSpectrum } from "../components/dashboard/RiskSpectrum";
 import { HardeningPostureList } from "../components/dashboard/HardeningPostureList";
 import { FluidIssuesStream } from "../components/dashboard/FluidIssuesStream";
 import { FluidRecentScans } from "../components/dashboard/FluidRecentScans";
+import { BaseImageAdvisor } from "../components/dashboard/BaseImageAdvisor";
 import { FindingDetailDrawer } from "../components/findings/FindingDetailDrawer";
 import { getDashboardStats } from "../services/dashboard.service";
 import { getScans } from "../services/scans.service";
@@ -105,7 +106,10 @@ export const DashboardPage: React.FC = () => {
         </div>
       </div>
 
-      {/* 5. Stunning Slide-in Inspection Drawer */}
+      {/* 3. Base Image & CVE Footprint Advisor */}
+      <BaseImageAdvisor onRemediated={loadAll} />
+
+      {/* 4. Stunning Slide-in Inspection Drawer */}
       <FindingDetailDrawer
         finding={selectedFinding}
         isOpen={isDrawerOpen}

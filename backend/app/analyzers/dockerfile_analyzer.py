@@ -3,6 +3,8 @@ import re
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 from ..models import Finding, CodeDiff, ResourceType, Severity, FindingCategory
+from .image_analyzer import ImageSecurityAnalyzer
+from .secrets_analyzer import SecretsAnalyzer
 
 
 class DockerfileAnalyzer:
@@ -80,6 +82,8 @@ class DockerfileAnalyzer:
                         documentation_url="https://docs.docker.com/develop/develop-images/instructions/#expose",
                         status="OPEN",
                         created_at=datetime.utcnow().isoformat() + "Z",
+                        auto_fixable=True,
+                        remediation_action="disable_ssh",
                     )
                 )
 
@@ -109,6 +113,8 @@ class DockerfileAnalyzer:
                     documentation_url="https://docs.docker.com/develop/develop-images/instructions/#user",
                     status="OPEN",
                     created_at=datetime.utcnow().isoformat() + "Z",
+                    auto_fixable=True,
+                    remediation_action="inject_user",
                 )
             )
 
@@ -138,7 +144,17 @@ class DockerfileAnalyzer:
                     documentation_url="https://docs.docker.com/reference/dockerfile/#healthcheck",
                     status="OPEN",
                     created_at=datetime.utcnow().isoformat() + "Z",
+                    auto_fixable=True,
+                    remediation_action="inject_healthcheck",
                 )
             )
+
+        # Check Image Bloat & CVE optimization
+        img_findings, _ = ImageSecurityAnalyzer.audit_dockerfile_image(self.filepath, lines)
+        findings.extend(img_findings)
+
+        # Check Secrets in Dockerfile
+        sec_findings = SecretsAnalyzer.audit_dockerfile(self.filepath, lines)
+        findings.extend(sec_findings)
 
         return findings

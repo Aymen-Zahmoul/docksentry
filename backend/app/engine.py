@@ -1,6 +1,7 @@
 import os
 import uuid
 import time
+import yaml
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 
@@ -13,15 +14,18 @@ from .models import (
     FindingsSummary,
     CategoryPosture,
     TopIssue,
+    ImageAdvisorItem,
 )
 from .rules import DEFAULT_RULES, RULES_MAP
 from .analyzers.dockerfile_analyzer import DockerfileAnalyzer
 from .analyzers.compose_analyzer import ComposeAnalyzer
 from .analyzers.runtime_analyzer import RuntimeAnalyzer
+from .analyzers.image_analyzer import ImageSecurityAnalyzer
+from .remediation import RemediationEngine
 
 
 class SecurityAuditEngine:
-    """Core DOCKSENTRY Orchestrator."""
+    """Core DOCKSENTRY Orchestrator with Auto-Remediation and Image Optimization."""
 
     def __init__(self, workspace_root: str):
         self.workspace_root = workspace_root
@@ -29,13 +33,15 @@ class SecurityAuditEngine:
         self.findings_db: Dict[str, Finding] = {}
         self.scans_history: List[Scan] = []
         self.containers_cache: List[Container] = []
+        self.image_advisories: List[ImageAdvisorItem] = []
 
         # Run initial discovery scan
         self.discover_and_audit()
 
     def discover_and_audit(self) -> None:
-        """Discovers Dockerfiles and compose files in workspace, plus runtime."""
+        """Discovers Dockerfiles, Compose files, runtime containers, and image advisors."""
         all_findings: List[Finding] = []
+        self.image_advisories = []
 
         # 1. Search for Dockerfiles
         for root, _, files in os.walk(self.workspace_root):
@@ -44,6 +50,13 @@ class SecurityAuditEngine:
                     path = os.path.join(root, file)
                     analyzer = DockerfileAnalyzer(path)
                     all_findings.extend(analyzer.analyze())
+                    # Collect image advisories
+                    try:
+                        with open(path, "r", encoding="utf-8", errors="ignore") as df_f:
+                            _, advs = ImageSecurityAnalyzer.audit_dockerfile_image(path, df_f.readlines())
+                            self.image_advisories.extend(advs)
+                    except Exception:
+                        pass
 
         # 2. Search for docker-compose files
         for root, _, files in os.walk(self.workspace_root):
@@ -52,6 +65,15 @@ class SecurityAuditEngine:
                     path = os.path.join(root, file)
                     analyzer = ComposeAnalyzer(path)
                     all_findings.extend(analyzer.analyze())
+                    # Collect image advisories
+                    try:
+                        with open(path, "r", encoding="utf-8", errors="ignore") as cmp_f:
+                            cmp_dict = yaml.safe_load(cmp_f)
+                            if isinstance(cmp_dict, dict):
+                                _, advs = ImageSecurityAnalyzer.audit_compose_images(path, cmp_dict)
+                                self.image_advisories.extend(advs)
+                    except Exception:
+                        pass
 
         # 3. Discover Runtime Containers
         runtime_analyzer = RuntimeAnalyzer()
@@ -59,16 +81,47 @@ class SecurityAuditEngine:
         runtime_findings = runtime_analyzer.analyze()
         all_findings.extend(runtime_findings)
 
+        # Collect advisories for runtime container images
+        for c in self.containers_cache:
+            matched = ImageSecurityAnalyzer.match_base_image(c.image)
+            if matched:
+                base_key, profile = matched
+                size_red = round(
+                    ((profile["current_size_mb"] - profile["recommended_size_mb"]) / profile["current_size_mb"]) * 100
+                )
+                cve_red = round(
+                    ((profile["current_cve_estimate"] - profile["recommended_cve_estimate"]) / profile["current_cve_estimate"]) * 100
+                )
+                adv_id = f"adv-rt-{c.id[:8]}"
+                if not any(a.id == adv_id for a in self.image_advisories):
+                    self.image_advisories.append(
+                        ImageAdvisorItem(
+                            id=adv_id,
+                            current_image=c.image,
+                            target_resource=f"Container '{c.name}'",
+                            source_file=f"Docker Runtime ({c.id[:12]})",
+                            current_size_mb=profile["current_size_mb"],
+                            current_cve_estimate=profile["current_cve_estimate"],
+                            recommended_image=profile["recommended_image"],
+                            recommended_size_mb=profile["recommended_size_mb"],
+                            recommended_cve_estimate=profile["recommended_cve_estimate"],
+                            size_reduction_pct=size_red,
+                            cve_reduction_pct=cve_red,
+                            risk_level=profile["risk_level"],
+                            remediation_status="PENDING",
+                            finding_id=None,
+                        )
+                    )
+
         # Store in findings_db
         for f in all_findings:
-            # Check if rule is enabled
             rule = self.rules.get(f.rule_id)
             if rule and not rule.enabled:
                 continue
             self.findings_db[f.id] = f
 
-        # If no local dockerfile or compose was found in root, seed demo files or run audit
-        if len(self.findings_db) < 5:
+        # Seed sample spec if needed
+        if len(self.findings_db) < 3:
             self._seed_sample_spec_if_needed()
 
     def run_scan(self, scan_type: str, target: str) -> Scan:
@@ -77,10 +130,12 @@ class SecurityAuditEngine:
         new_findings: List[Finding] = []
 
         if scan_type == "dockerfile":
-            analyzer = DockerfileAnalyzer(target if os.path.isabs(target) else os.path.join(self.workspace_root, target))
+            t_path = target if os.path.isabs(target) else os.path.join(self.workspace_root, target)
+            analyzer = DockerfileAnalyzer(t_path)
             new_findings = analyzer.analyze()
         elif scan_type == "compose":
-            analyzer = ComposeAnalyzer(target if os.path.isabs(target) else os.path.join(self.workspace_root, target))
+            t_path = target if os.path.isabs(target) else os.path.join(self.workspace_root, target)
+            analyzer = ComposeAnalyzer(t_path)
             new_findings = analyzer.analyze()
         elif scan_type == "runtime":
             analyzer = RuntimeAnalyzer(target)
@@ -117,6 +172,44 @@ class SecurityAuditEngine:
 
         self.scans_history.insert(0, scan)
         return scan
+
+    def get_image_advisories(self) -> List[ImageAdvisorItem]:
+        return self.image_advisories
+
+    def remediate_finding(self, finding_id: str) -> Dict[str, Any]:
+        finding = self.findings_db.get(finding_id)
+        if not finding:
+            return {"success": False, "error": f"Finding '{finding_id}' not found."}
+
+        success, msg = RemediationEngine.remediate(finding)
+        if success:
+            for adv in self.image_advisories:
+                if adv.finding_id == finding_id:
+                    adv.remediation_status = "REMEDIATED"
+
+        return {
+            "success": success,
+            "message": msg,
+            "finding": finding.to_dict(),
+            "backup_path": finding.backup_path,
+        }
+
+    def rollback_finding(self, finding_id: str) -> Dict[str, Any]:
+        finding = self.findings_db.get(finding_id)
+        if not finding:
+            return {"success": False, "error": f"Finding '{finding_id}' not found."}
+
+        success, msg = RemediationEngine.rollback(finding)
+        if success:
+            for adv in self.image_advisories:
+                if adv.finding_id == finding_id:
+                    adv.remediation_status = "PENDING"
+
+        return {
+            "success": success,
+            "message": msg,
+            "finding": finding.to_dict(),
+        }
 
     def get_dashboard_stats(self) -> DashboardStats:
         findings = list(self.findings_db.values())
@@ -165,6 +258,18 @@ class SecurityAuditEngine:
                 color="#F97316",
             ),
             CategoryPosture(
+                name="Supply Chain & Images",
+                pass_rate=max(100 - cat_counts.get("SUPPLY_CHAIN", 0) * 15, 40),
+                violations=cat_counts.get("SUPPLY_CHAIN", 0),
+                color="#8B5CF6",
+            ),
+            CategoryPosture(
+                name="Secrets & Credentials",
+                pass_rate=max(100 - cat_counts.get("SECRETS", 0) * 25, 25),
+                violations=cat_counts.get("SECRETS", 0),
+                color="#EF4444",
+            ),
+            CategoryPosture(
                 name="Network & 0.0.0.0",
                 pass_rate=max(100 - cat_counts.get("NETWORK", 0) * 12, 50),
                 violations=cat_counts.get("NETWORK", 0),
@@ -185,7 +290,7 @@ class SecurityAuditEngine:
                 rule_counts[f.rule_id] = rule_counts.get(f.rule_id, 0) + 1
 
         top_issues: List[TopIssue] = []
-        for r_id, count in sorted(rule_counts.items(), key=lambda x: x[1], reverse=True)[:4]:
+        for r_id, count in sorted(rule_counts.items(), key=lambda x: x[1], reverse=True)[:5]:
             r_obj = self.rules.get(r_id)
             if r_obj:
                 top_issues.append(
@@ -212,31 +317,29 @@ class SecurityAuditEngine:
         )
 
     def _seed_sample_spec_if_needed(self):
-        """Creates sample test docker-compose and Dockerfile if workspace has none."""
         sample_compose = os.path.join(self.workspace_root, "docker-compose.yml")
         if not os.path.exists(sample_compose):
             with open(sample_compose, "w", encoding="utf-8") as f:
                 f.write("""services:
   api:
-    image: node:20-alpine
+    image: node:20
     ports:
       - "3000:3000"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
 
   database:
-    image: postgres:16-alpine
+    image: postgres:latest
     ports:
       - "0.0.0.0:5432:5432"
     environment:
-      POSTGRES_PASSWORD: secretpassword
+      POSTGRES_PASSWORD: SuperSecretPassword123!
 
-  monitoring:
-    image: agent:latest
+  cache:
+    image: redis:latest
     privileged: true
     cap_add:
       - SYS_ADMIN
-      - NET_ADMIN
 """)
             analyzer = ComposeAnalyzer(sample_compose)
             for f in analyzer.analyze():
@@ -245,10 +348,10 @@ class SecurityAuditEngine:
         sample_dockerfile = os.path.join(self.workspace_root, "Dockerfile")
         if not os.path.exists(sample_dockerfile):
             with open(sample_dockerfile, "w", encoding="utf-8") as f:
-                f.write("""FROM python:3.12-slim
+                f.write("""FROM python:3.11
 WORKDIR /app
 COPY . .
-EXPOSE 8000
+EXPOSE 22
 CMD ["python", "app.py"]
 """)
             analyzer = DockerfileAnalyzer(sample_dockerfile)

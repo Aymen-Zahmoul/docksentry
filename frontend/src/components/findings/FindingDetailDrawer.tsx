@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   FiAlertCircle,
   FiTerminal,
@@ -13,6 +13,9 @@ import {
   FiArrowRight,
   FiCopy,
   FiCheck,
+  FiZap,
+  FiRotateCcw,
+  FiRefreshCw,
 } from "react-icons/fi";
 import { SiDocker } from "react-icons/si";
 import { TbShieldExclamation, TbShieldCheck } from "react-icons/tb";
@@ -27,6 +30,7 @@ import { SeverityBadge, StatusBadge } from "../ui/Badge";
 import { CodeDiffViewer } from "../ui/CodeDiffViewer";
 import { Button } from "../ui/Button";
 import { Finding, FindingStatus } from "../../types/finding";
+import { remediateFinding, rollbackFinding } from "../../services/findings.service";
 
 interface FindingDetailDrawerProps {
   finding: Finding | null;
@@ -43,14 +47,22 @@ export const FindingDetailDrawer: React.FC<FindingDetailDrawerProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<"diagnostic" | "remediation" | "compliance">("diagnostic");
   const [copiedEvidence, setCopiedEvidence] = useState(false);
+  const [currentFinding, setCurrentFinding] = useState<Finding | null>(finding);
+  const [isRemediating, setIsRemediating] = useState(false);
+  const [remediationMsg, setRemediationMsg] = useState<string | null>(null);
 
-  if (!finding) return null;
+  useEffect(() => {
+    setCurrentFinding(finding);
+    setRemediationMsg(null);
+  }, [finding]);
+
+  if (!currentFinding) return null;
 
   const resourceIcon = {
     dockerfile: FiFileText,
     compose_service: FiLayers,
     container: SiDocker,
-  }[finding.resource_type];
+  }[currentFinding.resource_type];
 
   const Icon = resourceIcon || FiTerminal;
 
@@ -68,10 +80,48 @@ export const FindingDetailDrawer: React.FC<FindingDetailDrawerProps> = ({
   };
 
   const handleCopyEvidence = () => {
-    navigator.clipboard.writeText(finding.evidence);
+    navigator.clipboard.writeText(currentFinding.evidence);
     setCopiedEvidence(true);
     setTimeout(() => setCopiedEvidence(false), 2000);
   };
+
+  const handleApplyFix = async () => {
+    if (!currentFinding) return;
+    setIsRemediating(true);
+    setRemediationMsg(null);
+    try {
+      const res = await remediateFinding(currentFinding.id);
+      if (res.finding) {
+        setCurrentFinding(res.finding);
+        setRemediationMsg(res.message);
+        if (onStatusChange) onStatusChange(currentFinding.id, "RESOLVED");
+      }
+    } catch (err: any) {
+      setRemediationMsg(err.message || "Failed to apply remediation.");
+    } finally {
+      setIsRemediating(false);
+    }
+  };
+
+  const handleRollback = async () => {
+    if (!currentFinding) return;
+    setIsRemediating(true);
+    setRemediationMsg(null);
+    try {
+      const res = await rollbackFinding(currentFinding.id);
+      if (res.finding) {
+        setCurrentFinding(res.finding);
+        setRemediationMsg(res.message);
+        if (onStatusChange) onStatusChange(currentFinding.id, "OPEN");
+      }
+    } catch (err: any) {
+      setRemediationMsg(err.message || "Failed to rollback.");
+    } finally {
+      setIsRemediating(false);
+    }
+  };
+
+  const isResolved = currentFinding.status === "RESOLVED";
 
   return (
     <Drawer open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -79,7 +129,7 @@ export const FindingDetailDrawer: React.FC<FindingDetailDrawerProps> = ({
         {/* Ambient Top Glow Aura */}
         <div
           className={`absolute top-0 inset-x-0 h-32 bg-gradient-to-b ${getAuraColor(
-            finding.severity
+            currentFinding.severity
           )} to-transparent pointer-events-none opacity-80 z-0`}
         />
 
@@ -88,13 +138,19 @@ export const FindingDetailDrawer: React.FC<FindingDetailDrawerProps> = ({
           <div className="min-w-0 pr-4">
             <div className="flex items-center gap-2 mb-1">
               <span className="font-mono text-emerald-400 font-semibold text-xs px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/30">
-                {finding.rule_id}
+                {currentFinding.rule_id}
               </span>
-              <SeverityBadge severity={finding.severity} size="sm" />
-              <StatusBadge status={finding.status} />
+              <SeverityBadge severity={currentFinding.severity} size="sm" />
+              <StatusBadge status={currentFinding.status} />
+              {currentFinding.auto_fixable && (
+                <span className="inline-flex items-center gap-1 font-mono text-[10px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-300 border border-amber-500/30">
+                  <FiZap className="w-3 h-3 text-amber-400" />
+                  <span>1-Click Fix</span>
+                </span>
+              )}
             </div>
             <DrawerTitle className="truncate text-base font-bold text-white">
-              {finding.title}
+              {currentFinding.title}
             </DrawerTitle>
           </div>
 
@@ -117,17 +173,17 @@ export const FindingDetailDrawer: React.FC<FindingDetailDrawerProps> = ({
               </div>
               <div className="min-w-0">
                 <span className="text-[10px] text-slate-400 uppercase tracking-wider block">
-                  Target: {finding.resource_type}
+                  Target: {currentFinding.resource_type}
                 </span>
                 <span className="font-semibold text-white truncate block">
-                  {finding.resource}
+                  {currentFinding.resource}
                 </span>
               </div>
             </div>
 
             <div className="text-right text-[11px] text-slate-400 shrink-0">
-              <span>{finding.source}</span>
-              {finding.line ? <span className="text-emerald-400"> : line {finding.line}</span> : null}
+              <span>{currentFinding.source}</span>
+              {currentFinding.line ? <span className="text-emerald-400"> : line {currentFinding.line}</span> : null}
             </div>
           </div>
         </div>
@@ -152,7 +208,7 @@ export const FindingDetailDrawer: React.FC<FindingDetailDrawerProps> = ({
                 : "border-transparent text-slate-400 hover:text-slate-200"
             }`}
           >
-            Remediation & Diff
+            Remediation & 1-Click Fix
           </button>
           <button
             onClick={() => setActiveTab("compliance")}
@@ -177,7 +233,7 @@ export const FindingDetailDrawer: React.FC<FindingDetailDrawerProps> = ({
                   <span>Detected Insecurity</span>
                 </div>
                 <div className="p-3.5 rounded-xl bg-slate-900/40 border border-white/[0.06] text-xs text-slate-200 leading-relaxed">
-                  {finding.message}
+                  {currentFinding.message}
                 </div>
               </div>
 
@@ -206,7 +262,7 @@ export const FindingDetailDrawer: React.FC<FindingDetailDrawerProps> = ({
                   </button>
                 </div>
                 <div className="p-3 rounded-xl bg-slate-950 border border-orange-500/20 font-mono text-xs text-orange-300 overflow-x-auto">
-                  <code>{finding.evidence}</code>
+                  <code>{currentFinding.evidence}</code>
                 </div>
               </div>
 
@@ -217,7 +273,7 @@ export const FindingDetailDrawer: React.FC<FindingDetailDrawerProps> = ({
                   <span>Attack Vector & Breakout Risk</span>
                 </div>
                 <div className="p-3.5 rounded-xl bg-red-950/15 border border-red-500/20 text-xs text-red-100/90 leading-relaxed space-y-3">
-                  <p>{finding.why_it_matters}</p>
+                  <p>{currentFinding.why_it_matters}</p>
 
                   {/* Visual Threat Path Flow */}
                   <div className="pt-2 border-t border-red-500/20 flex items-center justify-between text-[11px] font-mono text-slate-300">
@@ -240,20 +296,76 @@ export const FindingDetailDrawer: React.FC<FindingDetailDrawerProps> = ({
 
           {activeTab === "remediation" && (
             <div className="space-y-4">
+              {/* 1-Click Auto-Remediation Control Card */}
+              {currentFinding.auto_fixable && (
+                <div
+                  className={`p-4 rounded-xl border transition-all ${
+                    isResolved
+                      ? "bg-emerald-950/20 border-emerald-500/30 text-emerald-200"
+                      : "bg-slate-900/60 border-amber-500/30 text-slate-200"
+                  }`}
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <FiZap className={`w-4 h-4 ${isResolved ? "text-emerald-400" : "text-amber-400"}`} />
+                        <span className="text-xs font-mono font-bold uppercase tracking-wider text-white">
+                          {isResolved ? "Remediation Applied" : "1-Click Auto-Remediation Available"}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-300">
+                        {isResolved
+                          ? "Hardening patch has been applied to disk. An atomic backup (.docksentry.bak) was preserved."
+                          : `Surgically patches ${currentFinding.resource} directly on disk with safety backup.`}
+                      </p>
+                      {remediationMsg && (
+                        <div className="text-[11px] font-mono text-emerald-400 pt-1">
+                          ✓ {remediationMsg}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="shrink-0 flex items-center gap-2">
+                      {isResolved ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={isRemediating}
+                          onClick={handleRollback}
+                          icon={isRemediating ? <FiRefreshCw className="w-3.5 h-3.5 animate-spin" /> : <FiRotateCcw className="w-3.5 h-3.5" />}
+                        >
+                          {isRemediating ? "Reverting..." : "Undo / Rollback"}
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="white"
+                          size="sm"
+                          disabled={isRemediating}
+                          onClick={handleApplyFix}
+                          icon={isRemediating ? <FiRefreshCw className="w-3.5 h-3.5 animate-spin" /> : <FiZap className="w-3.5 h-3.5 text-amber-500" />}
+                        >
+                          {isRemediating ? "Patching..." : "⚡ Apply 1-Click Fix"}
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-xs font-mono uppercase tracking-wider text-slate-400">
                   <FiTool className="w-4 h-4 text-emerald-400" />
                   <span>Hardening Guide</span>
                 </div>
-                <p className="text-xs text-slate-300 leading-relaxed">{finding.remediation}</p>
+                <p className="text-xs text-slate-300 leading-relaxed">{currentFinding.remediation}</p>
               </div>
 
-              {finding.code_diff && (
+              {currentFinding.code_diff && (
                 <div className="space-y-2">
                   <div className="text-[11px] font-mono uppercase tracking-wider text-slate-400">
                     Side-by-Side Configuration Diff
                   </div>
-                  <CodeDiffViewer diff={finding.code_diff} />
+                  <CodeDiffViewer diff={currentFinding.code_diff} />
                 </div>
               )}
             </div>
@@ -268,18 +380,18 @@ export const FindingDetailDrawer: React.FC<FindingDetailDrawerProps> = ({
                 </div>
                 <div className="space-y-1 text-slate-400 leading-relaxed">
                   <div>
-                    Benchmark Rule: <span className="text-white font-bold">{finding.rule_id}</span>
+                    Benchmark Rule: <span className="text-white font-bold">{currentFinding.rule_id}</span>
                   </div>
                   <div>
-                    Category: <span className="text-slate-200">{finding.category}</span>
+                    Category: <span className="text-slate-200">{currentFinding.category}</span>
                   </div>
                   <div>
-                    Standard Version: <span className="text-slate-200">CIS Docker v1.6.0 Section 4/5</span>
+                    Standard Version: <span className="text-slate-200">CIS Docker Benchmark v1.6.0</span>
                   </div>
                 </div>
                 <div className="pt-2 border-t border-white/[0.05]">
                   <a
-                    href={finding.documentation_url}
+                    href={currentFinding.documentation_url}
                     target="_blank"
                     rel="noreferrer"
                     className="inline-flex items-center gap-1.5 text-emerald-400 hover:text-emerald-300 transition-colors"
@@ -296,27 +408,39 @@ export const FindingDetailDrawer: React.FC<FindingDetailDrawerProps> = ({
         {/* Drawer Action Footer */}
         <div className="p-4 px-6 border-t border-white/[0.06] bg-slate-900/40 backdrop-blur-md flex items-center justify-between gap-3 relative z-10">
           <div className="flex items-center gap-2 font-mono text-xs">
+            {currentFinding.auto_fixable && !isResolved && (
+              <Button
+                variant="white"
+                size="sm"
+                disabled={isRemediating}
+                onClick={handleApplyFix}
+                icon={isRemediating ? <FiRefreshCw className="w-3.5 h-3.5 animate-spin" /> : <FiZap className="w-3.5 h-3.5 text-amber-500" />}
+              >
+                {isRemediating ? "Applying..." : "Auto-Fix"}
+              </Button>
+            )}
+
             {onStatusChange && (
               <>
-                {finding.status !== "RESOLVED" && (
-                  <Button
-                    variant="white"
-                    size="sm"
-                    onClick={() => {
-                      onStatusChange(finding.id, "RESOLVED");
-                      onClose();
-                    }}
-                    icon={<FiCheckCircle className="w-3.5 h-3.5 text-emerald-600" />}
-                  >
-                    Mark Resolved
-                  </Button>
-                )}
-                {finding.status !== "IGNORED" && (
+                {!isResolved && (
                   <Button
                     variant="secondary"
                     size="sm"
                     onClick={() => {
-                      onStatusChange(finding.id, "IGNORED");
+                      onStatusChange(currentFinding.id, "RESOLVED");
+                      onClose();
+                    }}
+                    icon={<FiCheckCircle className="w-3.5 h-3.5 text-emerald-400" />}
+                  >
+                    Mark Resolved
+                  </Button>
+                )}
+                {currentFinding.status !== "IGNORED" && (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => {
+                      onStatusChange(currentFinding.id, "IGNORED");
                       onClose();
                     }}
                   >

@@ -1,6 +1,6 @@
 export type Severity = "CRITICAL" | "HIGH" | "MEDIUM" | "LOW" | "INFO";
 
-export type FindingStatus = "OPEN" | "RESOLVED" | "IGNORED";
+export type FindingStatus = "OPEN" | "RESOLVED" | "IGNORED" | "REMEDIATED";
 
 export type ResourceType = "dockerfile" | "compose_service" | "container";
 
@@ -11,7 +11,9 @@ export type FindingCategory =
   | "CAPABILITIES"
   | "NETWORK"
   | "FILESYSTEM"
-  | "RELIABILITY";
+  | "RELIABILITY"
+  | "SUPPLY_CHAIN"
+  | "SECRETS";
 
 export interface CodeDiff {
   language: "dockerfile" | "yaml" | "bash";
@@ -39,4 +41,24 @@ export interface Finding {
   cis_reference?: string;
   documentation_url: string;
   detected_at: string;
+  auto_fixable?: boolean;
+  remediation_action?: string;
+  backup_path?: string;
+}
+
+export interface ImageAdvisorItem {
+  id: string;
+  current_image: string;
+  target_resource: string;
+  source_file: string;
+  current_size_mb: number;
+  current_cve_estimate: number;
+  recommended_image: string;
+  recommended_size_mb: number;
+  recommended_cve_estimate: number;
+  size_reduction_pct: number;
+  cve_reduction_pct: number;
+  risk_level: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW";
+  remediation_status: "PENDING" | "REMEDIATED";
+  finding_id?: string;
 }

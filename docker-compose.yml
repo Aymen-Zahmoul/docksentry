@@ -1,0 +1,20 @@
+services:
+  api:
+    image: node:20
+    ports:
+      - "3000:3000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  database:
+    image: postgres:latest
+    ports:
+      - "0.0.0.0:5432:5432"
+    environment:
+      POSTGRES_PASSWORD: SuperSecretPassword123!
+
+  cache:
+    image: redis:latest
+    privileged: true
+    cap_add:
+      - SYS_ADMIN

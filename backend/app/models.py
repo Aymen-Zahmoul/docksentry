@@ -69,6 +69,9 @@ class Finding:
     documentation_url: str
     status: str = "OPEN"
     created_at: str = ""
+    auto_fixable: bool = False
+    remediation_action: Optional[str] = None
+    backup_path: Optional[str] = None
 
     def to_dict(self) -> Dict[str, Any]:
         data = asdict(self)
@@ -205,4 +208,25 @@ class DashboardStats:
     category_posture: List[CategoryPosture]
     top_issues: List[TopIssue]
     recent_scans: List[Scan]
+
+
+@dataclass
+class ImageAdvisorItem:
+    id: str
+    current_image: str
+    target_resource: str
+    source_file: str
+    current_size_mb: int
+    current_cve_estimate: int
+    recommended_image: str
+    recommended_size_mb: int
+    recommended_cve_estimate: int
+    size_reduction_pct: int
+    cve_reduction_pct: int
+    risk_level: str
+    remediation_status: str = "PENDING"
+    finding_id: Optional[str] = None
+
+    def to_dict(self) -> Dict[str, Any]:
+        return asdict(self)
 

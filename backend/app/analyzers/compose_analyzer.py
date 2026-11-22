@@ -3,6 +3,8 @@ import yaml
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 from ..models import Finding, CodeDiff, ResourceType, Severity, FindingCategory
+from .image_analyzer import ImageSecurityAnalyzer
+from .secrets_analyzer import SecretsAnalyzer
 
 
 class ComposeAnalyzer:
@@ -66,6 +68,7 @@ class ComposeAnalyzer:
                     documentation_url="https://docs.docker.com/compose/compose-file/",
                     status="OPEN",
                     created_at=datetime.utcnow().isoformat() + "Z",
+                    auto_fixable=False,
                 )
             )
             return findings
@@ -78,6 +81,38 @@ class ComposeAnalyzer:
         for svc_name, svc in services.items():
             if not isinstance(svc, dict):
                 continue
+
+            # 0. Root User (DS001)
+            user_val = str(svc.get("user", "")).strip().lower()
+            if not user_val or user_val in ["root", "0", "0:0"]:
+                findings.append(
+                    Finding(
+                        id=f"f-user-{svc_name}",
+                        rule_id="DS001",
+                        title=f"Service '{svc_name}' Runs Without Least-Privilege User",
+                        severity="HIGH",
+                        category="IDENTITY",
+                        resource=f"service:{svc_name}",
+                        resource_type=ResourceType.COMPOSE_SERVICE.value,
+                        source=self.filepath,
+                        line=None,
+                        message=f"Service '{svc_name}' does not specify a non-root 'user:'. Container executes as root (UID 0).",
+                        evidence=f"services.{svc_name}.user: {svc.get('user') or 'unset'}",
+                        why_it_matters="Containers running with root UID inherit full root permissions inside their namespace.",
+                        remediation="Define a non-root user (e.g. user: '10001:10001') in service specification.",
+                        code_diff=CodeDiff(
+                            language="yaml",
+                            insecure=f"services:\n  {svc_name}:\n    image: app:latest",
+                            recommended=f"services:\n  {svc_name}:\n    image: app:latest\n    user: '10001:10001'",
+                            trade_offs="Service process must have write access to necessary directories."
+                        ),
+                        documentation_url="https://docs.docker.com/compose/compose-file/05-services/#user",
+                        status="OPEN",
+                        created_at=datetime.utcnow().isoformat() + "Z",
+                        auto_fixable=True,
+                        remediation_action="inject_user",
+                    )
+                )
 
             # 1. Privileged Mode (DS002)
             if svc.get("privileged") is True:
@@ -94,17 +129,19 @@ class ComposeAnalyzer:
                         line=None,
                         message=f"Service '{svc_name}' specifies 'privileged: true'. This disables container isolation completely.",
                         evidence=f"services.{svc_name}.privileged: true",
-                        why_it_matters="Privileged mode disables the Linux seccomp profile, AppArmor/SELinux protections, and passes all host devices directly into the container. An attacker can escape to host root in seconds.",
-                        remediation="Remove 'privileged: true'. If specific kernel features are needed, grant only the granular Linux capabilities required via 'cap_add'.",
+                        why_it_matters="Privileged mode disables seccomp and AppArmor/SELinux protections. An attacker can escape to host root in seconds.",
+                        remediation="Remove 'privileged: true'. Grant only minimal capabilities via 'cap_add'.",
                         code_diff=CodeDiff(
                             language="yaml",
-                            insecure=f"services:\n  {svc_name}:\n    image: nginx:alpine\n    privileged: true",
-                            recommended=f"services:\n  {svc_name}:\n    image: nginx:alpine\n    privileged: false\n    cap_drop:\n      - ALL\n    cap_add:\n      - NET_BIND_SERVICE",
-                            trade_offs="Removing privileged mode prevents low-level device access. Test whether application actually needs raw hardware or socket access."
+                            insecure=f"services:\n  {svc_name}:\n    privileged: true",
+                            recommended=f"services:\n  {svc_name}:\n    privileged: false\n    cap_drop:\n      - ALL\n    cap_add:\n      - NET_BIND_SERVICE",
+                            trade_offs="Removing privileged mode prevents low-level raw host device access."
                         ),
                         documentation_url="https://docs.docker.com/engine/reference/run/#runtime-privilege-and-linux-capabilities",
                         status="OPEN",
                         created_at=datetime.utcnow().isoformat() + "Z",
+                        auto_fixable=True,
+                        remediation_action="disable_privileged",
                     )
                 )
 
@@ -134,17 +171,19 @@ class ComposeAnalyzer:
                             line=None,
                             message=f"Service '{svc_name}' mounts sensitive host path '{host_path}'.",
                             evidence=f"volumes: [ {vol_str} ]",
-                            why_it_matters="Mounting /var/run/docker.sock or host root directories gives the container full administrative control over the host Docker daemon or raw filesystem.",
-                            remediation="Do not mount the Docker socket or host root. For Docker management, use an isolated proxy (e.g. docker-socket-proxy) with strict read-only filter rules.",
+                            why_it_matters="Mounting /var/run/docker.sock gives the container administrative control over the host Docker daemon.",
+                            remediation="Remove host Docker socket mount or use a read-only socket proxy.",
                             code_diff=CodeDiff(
                                 language="yaml",
                                 insecure=f"services:\n  {svc_name}:\n    volumes:\n      - /var/run/docker.sock:/var/run/docker.sock",
-                                recommended=f"services:\n  {svc_name}:\n    # Connect to authenticated TCP socket or socket-proxy\n    environment:\n      - DOCKER_HOST=tcp://socket-proxy:2375\n    networks:\n      - internal_mgmt",
-                                trade_offs="Requires deploying a socket proxy container to filter API endpoints or re-architecting to avoid host daemon access."
+                                recommended=f"services:\n  {svc_name}:\n    # Connect to isolated socket proxy or remove mount",
+                                trade_offs="Requires decoupling application from direct host daemon control."
                             ),
                             documentation_url="https://docs.docker.com/storage/volumes/",
                             status="OPEN",
                             created_at=datetime.utcnow().isoformat() + "Z",
+                            auto_fixable=True,
+                            remediation_action="remove_sensitive_mount",
                         )
                     )
 
@@ -166,17 +205,19 @@ class ComposeAnalyzer:
                             line=None,
                             message=f"Service '{svc_name}' grants high-risk Linux capability CAP_{cap_upper}.",
                             evidence=f"cap_add: [ {cap} ]",
-                            why_it_matters=f"Capability CAP_{cap_upper} enables processes to bypass DAC checks, trace host processes, or mount filesystems, significantly elevating breakout potential.",
-                            remediation="Drop ALL capabilities by default, then selectively add only the minimum required capabilities.",
+                            why_it_matters=f"Capability CAP_{cap_upper} enables processes to alter kernel structures or escape sandbox boundaries.",
+                            remediation="Drop ALL capabilities by default, then add only required minimal capabilities.",
                             code_diff=CodeDiff(
                                 language="yaml",
                                 insecure=f"services:\n  {svc_name}:\n    cap_add:\n      - {cap}",
                                 recommended=f"services:\n  {svc_name}:\n    cap_drop:\n      - ALL\n    cap_add:\n      - NET_BIND_SERVICE",
-                                trade_offs="Dropping capabilities may cause legacy binaries or diagnostic tools (ping, strace) to fail if they rely on elevated kernel hooks."
+                                trade_offs="Dropping capabilities may cause diagnostic tools like ping or strace to fail."
                             ),
                             documentation_url="https://docs.docker.com/engine/reference/run/#runtime-privilege-and-linux-capabilities",
                             status="OPEN",
                             created_at=datetime.utcnow().isoformat() + "Z",
+                            auto_fixable=True,
+                            remediation_action="remove_dangerous_caps",
                         )
                     )
 
@@ -187,7 +228,6 @@ class ComposeAnalyzer:
                 is_public = False
                 host_port = None
 
-                # Formats: "8080:80", "0.0.0.0:8080:80", "127.0.0.1:8080:80"
                 if "127.0.0.1" in p_str or "localhost" in p_str:
                     is_public = False
                 elif "0.0.0.0" in p_str or ":" in p_str:
@@ -204,31 +244,33 @@ class ComposeAnalyzer:
                         except ValueError:
                             pass
 
-                if is_public and host_port in self.DATABASE_PORTS:
+                if is_public:
                     findings.append(
                         Finding(
-                            id=f"f-port-{svc_name}-{host_port}",
+                            id=f"f-port-{svc_name}-{host_port or 'all'}",
                             rule_id="DS005",
-                            title=f"Internal Database Port {host_port} Bound Publicly (0.0.0.0)",
-                            severity="HIGH",
+                            title=f"Port Binding Bound Publicly (0.0.0.0) in '{svc_name}'",
+                            severity="MEDIUM",
                             category="NETWORK",
                             resource=f"service:{svc_name}",
                             resource_type=ResourceType.COMPOSE_SERVICE.value,
                             source=self.filepath,
                             line=None,
-                            message=f"Service '{svc_name}' binds database port {host_port} to 0.0.0.0 across all host network interfaces.",
+                            message=f"Service '{svc_name}' binds port {p_str} across all public network interfaces.",
                             evidence=f"ports: [ \"{p_str}\" ]",
-                            why_it_matters="Publicly exposing database services bypasses network boundary controls, inviting brute-force and remote exploitation from external networks.",
-                            remediation="Bind database ports to localhost (127.0.0.1) for local debugging, or omit host port binding completely and rely on Compose private networks.",
+                            why_it_matters="Publicly exposing services to 0.0.0.0 allows unauthenticated access from local network and internet scans.",
+                            remediation="Bind service ports strictly to localhost (127.0.0.1).",
                             code_diff=CodeDiff(
                                 language="yaml",
                                 insecure=f"services:\n  {svc_name}:\n    ports:\n      - \"{p_str}\"",
-                                recommended=f"services:\n  {svc_name}:\n    # Bind to loopback only\n    ports:\n      - \"127.0.0.1:{host_port}:{host_port}\"",
-                                trade_offs="External workstations or host tools cannot connect directly without SSH tunneling or port forwarding."
+                                recommended=f"services:\n  {svc_name}:\n    ports:\n      - \"127.0.0.1:{host_port}:{host_port}\"" if host_port else "    ports:\n      - \"127.0.0.1:8080:8080\"",
+                                trade_offs="External devices cannot connect directly without reverse proxy or SSH tunneling."
                             ),
                             documentation_url="https://docs.docker.com/network/#published-ports",
                             status="OPEN",
                             created_at=datetime.utcnow().isoformat() + "Z",
+                            auto_fixable=True,
+                            remediation_action="bind_localhost",
                         )
                     )
 
@@ -247,17 +289,19 @@ class ComposeAnalyzer:
                         line=None,
                         message=f"Service '{svc_name}' has a writable root filesystem. Compromised processes can download payloads or modify system binaries.",
                         evidence=f"services.{svc_name}.read_only: false (or unset)",
-                        why_it_matters="An immutable root filesystem prevents attackers from overwriting libraries, injecting webshells, or persisting malware across restarts.",
-                        remediation="Set 'read_only: true' and mount in-memory tmpfs volumes for ephemeral paths like /tmp and /run.",
+                        why_it_matters="An immutable root filesystem prevents attackers from overwriting libraries or persisting malware.",
+                        remediation="Set 'read_only: true' and mount in-memory tmpfs volumes for /tmp.",
                         code_diff=CodeDiff(
                             language="yaml",
-                            insecure=f"services:\n  {svc_name}:\n    image: nginx:alpine",
-                            recommended=f"services:\n  {svc_name}:\n    image: nginx:alpine\n    read_only: true\n    tmpfs:\n      - /tmp:rw,noexec,nosuid,size=64m\n      - /var/run:rw,noexec,nosuid,size=16m",
-                            trade_offs="Applications that write cache, temporary files, or logs to disk will fail unless corresponding directories are mounted as tmpfs or named volumes."
+                            insecure=f"services:\n  {svc_name}:\n    image: app:latest",
+                            recommended=f"services:\n  {svc_name}:\n    read_only: true\n    tmpfs:\n      - /tmp",
+                            trade_offs="Applications that write cache or logs to disk require tmpfs or named volume mounts."
                         ),
                         documentation_url="https://docs.docker.com/engine/reference/run/#prevent-container-from-modifying-its-own-image",
                         status="OPEN",
                         created_at=datetime.utcnow().isoformat() + "Z",
+                        auto_fixable=True,
+                        remediation_action="set_readonly_rootfs",
                     )
                 )
 
@@ -285,18 +329,28 @@ class ComposeAnalyzer:
                         line=None,
                         message=f"Service '{svc_name}' does not specify CPU or memory resource limits.",
                         evidence=f"services.{svc_name}.deploy.resources.limits unset",
-                        why_it_matters="A memory leak or denial-of-service attack inside the container can consume all available host memory, causing the host Linux kernel OOM-killer to terminate critical processes.",
+                        why_it_matters="Memory exhaustion or denial-of-service in a single container can crash the host kernel via OOM-killer.",
                         remediation="Define explicit CPU and memory constraints in Compose configuration.",
                         code_diff=CodeDiff(
                             language="yaml",
-                            insecure=f"services:\n  {svc_name}:\n    image: node:20-alpine",
-                            recommended=f"services:\n  {svc_name}:\n    image: node:20-alpine\n    deploy:\n      resources:\n        limits:\n          cpus: '1.0'\n          memory: 512M\n        reservations:\n          memory: 128M",
-                            trade_offs="Workloads that exceed configured memory limits will be terminated with exit code 137 (OOMKilled)."
+                            insecure=f"services:\n  {svc_name}:\n    image: app:latest",
+                            recommended=f"services:\n  {svc_name}:\n    deploy:\n      resources:\n        limits:\n          cpus: '0.50'\n          memory: 512M",
+                            trade_offs="Workloads that exceed configured memory limits will be terminated (OOMKilled)."
                         ),
                         documentation_url="https://docs.docker.com/compose/compose-file/deploy/#resources",
                         status="OPEN",
                         created_at=datetime.utcnow().isoformat() + "Z",
+                        auto_fixable=True,
+                        remediation_action="inject_resource_limits",
                     )
                 )
+
+        # 7. Image Bloat & CVE Analysis across Compose
+        img_findings, _ = ImageSecurityAnalyzer.audit_compose_images(self.filepath, content)
+        findings.extend(img_findings)
+
+        # 8. Secret & Credential Analysis across Compose
+        sec_findings = SecretsAnalyzer.audit_compose(self.filepath, content)
+        findings.extend(sec_findings)
 
         return findings

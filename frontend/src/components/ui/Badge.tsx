@@ -52,8 +52,9 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status }) => {
   const styles = {
     OPEN: "bg-red-500/10 text-red-400 border-red-500/20",
     RESOLVED: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
+    REMEDIATED: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30",
     IGNORED: "bg-slate-500/10 text-slate-400 border-slate-500/20",
-  }[status];
+  }[status] || "bg-slate-500/10 text-slate-400 border-slate-500/20";
 
   return (
     <span className={`inline-flex items-center px-2 py-0.5 text-[10px] font-mono rounded border uppercase font-medium ${styles}`}>

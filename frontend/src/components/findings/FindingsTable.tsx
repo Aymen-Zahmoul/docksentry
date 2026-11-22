@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { FiSearch, FiSliders, FiChevronRight, FiFileText, FiLayers } from "react-icons/fi";
+import { FiSearch, FiSliders, FiChevronRight, FiFileText, FiLayers, FiZap } from "react-icons/fi";
 import { SiDocker } from "react-icons/si";
 import { Finding, Severity, FindingStatus, FindingCategory } from "../../types/finding";
 import { SeverityBadge, StatusBadge } from "../ui/Badge";
@@ -19,6 +19,7 @@ export const FindingsTable: React.FC<FindingsTableProps> = ({
   const [selectedSeverity, setSelectedSeverity] = useState<Severity | "ALL">("ALL");
   const [selectedStatus, setSelectedStatus] = useState<FindingStatus | "ALL">("ALL");
   const [selectedCategory, setSelectedCategory] = useState<FindingCategory | "ALL">("ALL");
+  const [onlyAutoFixable, setOnlyAutoFixable] = useState(false);
 
   const severities: (Severity | "ALL")[] = ["ALL", "CRITICAL", "HIGH", "MEDIUM", "LOW", "INFO"];
   const statuses: (FindingStatus | "ALL")[] = ["ALL", "OPEN", "RESOLVED", "IGNORED"];
@@ -28,6 +29,8 @@ export const FindingsTable: React.FC<FindingsTableProps> = ({
     "PRIVILEGES",
     "VOLUMES",
     "CAPABILITIES",
+    "SUPPLY_CHAIN",
+    "SECRETS",
     "NETWORK",
     "FILESYSTEM",
     "RELIABILITY",
@@ -37,6 +40,7 @@ export const FindingsTable: React.FC<FindingsTableProps> = ({
     if (selectedSeverity !== "ALL" && f.severity !== selectedSeverity) return false;
     if (selectedStatus !== "ALL" && f.status !== selectedStatus) return false;
     if (selectedCategory !== "ALL" && f.category !== selectedCategory) return false;
+    if (onlyAutoFixable && !f.auto_fixable) return false;
     if (search) {
       const q = search.toLowerCase();
       const match =
@@ -63,6 +67,8 @@ export const FindingsTable: React.FC<FindingsTableProps> = ({
     }
   };
 
+  const autoFixableCount = findings.filter((f) => f.auto_fixable && f.status === "OPEN").length;
+
   return (
     <div className="space-y-4">
       {/* Filters Toolbar */}
@@ -79,6 +85,19 @@ export const FindingsTable: React.FC<FindingsTableProps> = ({
               className="w-full pl-9 pr-4 py-2 text-xs font-mono rounded-lg bg-slate-950/60 border border-white/[0.06] text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-slate-500 transition-colors"
             />
           </div>
+
+          {/* Quick Filter: Auto-Fixable */}
+          <button
+            onClick={() => setOnlyAutoFixable(!onlyAutoFixable)}
+            className={`px-3 py-2 text-xs font-mono rounded-lg border transition-all flex items-center gap-2 shrink-0 ${
+              onlyAutoFixable
+                ? "bg-amber-500/20 text-amber-300 border-amber-500/40 font-bold"
+                : "bg-slate-950/60 text-slate-300 border-white/[0.06] hover:border-white/[0.15]"
+            }`}
+          >
+            <FiZap className="w-3.5 h-3.5 text-amber-400" />
+            <span>1-Click Fixable ({autoFixableCount})</span>
+          </button>
 
           {/* Category Dropdown */}
           <div className="flex items-center gap-2 w-full md:w-auto">
@@ -171,7 +190,14 @@ export const FindingsTable: React.FC<FindingsTableProps> = ({
                     >
                       {/* Rule ID */}
                       <td className="py-3.5 px-4 font-bold text-slate-300 whitespace-nowrap">
-                        {finding.rule_id}
+                        <div className="flex items-center gap-1.5">
+                          <span>{finding.rule_id}</span>
+                          {finding.auto_fixable && finding.status === "OPEN" && (
+                            <span title="1-Click Auto-Fix Available">
+                              <FiZap className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
+                            </span>
+                          )}
+                        </div>
                       </td>
 
                       {/* Severity */}
@@ -208,7 +234,7 @@ export const FindingsTable: React.FC<FindingsTableProps> = ({
                       {/* Action */}
                       <td className="py-3.5 px-4 text-right whitespace-nowrap">
                         <span className="inline-flex items-center gap-1 text-[11px] text-emerald-400 group-hover:underline font-medium">
-                          Inspect & Remediate
+                          {finding.auto_fixable && finding.status === "OPEN" ? "⚡ Quick Fix" : "Inspect"}
                           <FiChevronRight className="w-3.5 h-3.5" />
                         </span>
                       </td>
@@ -232,7 +258,7 @@ export const FindingsTable: React.FC<FindingsTableProps> = ({
             Showing <strong className="text-slate-200">{filtered.length}</strong> of{" "}
             <strong>{findings.length}</strong> findings
           </span>
-          <span>Click any finding to inspect attack vector & remediation</span>
+          <span>Click any finding to inspect attack vector & 1-click remediation</span>
         </div>
       </div>
     </div>

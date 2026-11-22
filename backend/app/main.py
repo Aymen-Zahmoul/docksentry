@@ -79,6 +79,28 @@ def update_finding(finding_id):
     return jsonify(finding.to_dict())
 
 
+@app.route("/api/v1/findings/<finding_id>/remediate", methods=["POST"])
+def remediate_finding(finding_id):
+    result = engine.remediate_finding(finding_id)
+    if not result.get("success") and result.get("error") == f"Finding '{finding_id}' not found.":
+        return jsonify(result), 404
+    return jsonify(result), 200 if result.get("success") else 400
+
+
+@app.route("/api/v1/findings/<finding_id>/rollback", methods=["POST"])
+def rollback_finding(finding_id):
+    result = engine.rollback_finding(finding_id)
+    if not result.get("success") and result.get("error") == f"Finding '{finding_id}' not found.":
+        return jsonify(result), 404
+    return jsonify(result), 200 if result.get("success") else 400
+
+
+@app.route("/api/v1/images/advisor", methods=["GET"])
+def get_image_advisor():
+    advisories = engine.get_image_advisories()
+    return jsonify([a.to_dict() for a in advisories])
+
+
 @app.route("/api/v1/containers", methods=["GET"])
 def get_containers():
     return jsonify([c.to_dict() for c in engine.containers_cache])
